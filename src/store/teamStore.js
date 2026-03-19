@@ -8,6 +8,9 @@ import {
   deleteCard,
 } from '../firebase/team';
 import { setTodoDoneBySyncId, getTodoBySyncId, deleteTodo as deleteTodoFn, addTodo as addTodoFn, archiveTodos, updateTodoDates, updateTodoPriority } from '../firebase/personal';
+import { logActivity, buildActivity } from '../firebase/activity';
+
+const STATUS_LABEL = { todo: '할 일', inProgress: '진행 중', review: '검토', done: '완료' };
 
 const useTeamStore = create((set, get) => ({
   cards: [],
@@ -40,23 +43,31 @@ const useTeamStore = create((set, get) => ({
   setFilterPriority: (value) => set({ filterPriority: value }),
 
   // 카드 이동 → 투두 완료 동기화
-  moveCard: async (cardId, status, card, assigneeId) => {
+  moveCard: async (cardId, status, card, assigneeId, actor) => {
     // 1. 칸반 카드 이동
     await moveCard(cardId, status);
 
     // 2. syncId 있으면 투두 동기화
     if (card.syncId && assigneeId) {
       const isDone = status === 'done';
-      // 완료 or 완료 해제 시만 동기화
       if (status === 'done' || card.status === 'done') {
         await setTodoDoneBySyncId(assigneeId, card.syncId, isDone);
       }
+    }
+
+    // 3. 활동 로그
+    if (actor) {
+      await logActivity(buildActivity('card_moved', actor, {
+        title: card.title,
+        from: STATUS_LABEL[card.status] || card.status,
+        to:   STATUS_LABEL[status] || status,
+      }));
     }
   },
 
   // CRUD
   // 칸반 카드 추가 → 개인 투두에도 공유 상태로 추가 (오늘 날짜)
-  addCard: async (cardData) => {
+  addCard: async (cardData, actor) => {
     const syncId = Date.now().toString(36) + Math.random().toString(36).slice(2);
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -66,6 +77,11 @@ const useTeamStore = create((set, get) => ({
     const uid = cardData.assigneeId || cardData.authorId;
     if (uid) {
       await addTodoFn(uid, cardData.title, syncId, today, today, cardData.priority || 'medium');
+    }
+
+    // 활동 로그
+    if (actor) {
+      await logActivity(buildActivity('card_created', actor, { title: cardData.title }));
     }
   },
   // 카드 업데이트 → syncId 있으면 날짜/우선순위 투두에도 동기화
@@ -83,21 +99,29 @@ const useTeamStore = create((set, get) => ({
   },
 
   // 카드 완료 처리 → 투두 아카이브 + 카드 삭제
-  completeCard: async (cardId, card) => {
+  completeCard: async (cardId, card, actor) => {
     if (card?.syncId && card?.assigneeId) {
       const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
       if (todo) await archiveTodos(card.assigneeId, [todo.id]);
     }
     await deleteCard(cardId);
+
+    if (actor) {
+      await logActivity(buildActivity('card_completed', actor, { title: card.title }));
+    }
   },
 
   // 카드 삭제 → syncId 있으면 연결된 투두도 함께 삭제
-  deleteCard: async (cardId, card) => {
+  deleteCard: async (cardId, card, actor) => {
     if (card?.syncId && card?.assigneeId) {
       const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
       if (todo) await deleteTodoFn(card.assigneeId, todo.id);
     }
     await deleteCard(cardId);
+
+    if (actor) {
+      await logActivity(buildActivity('card_deleted', actor, { title: card?.title || '' }));
+    }
   },
 
   // 필터링된 카드

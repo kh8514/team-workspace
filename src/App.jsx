@@ -7,6 +7,7 @@ import PersonalTodo from './components/personal/PersonalTodo';
 import KanbanBoard from './components/team/KanbanBoard';
 import CalendarView from './components/CalendarView';
 import SummaryView from './components/SummaryView';
+import { subscribeActivity } from './firebase/activity';
 
 const TABS = [
   { key: 'todo',     label: '📋 투두리스트' },
@@ -22,6 +23,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('todo');
   const [overdueCards, setOverdueCards] = useState([]);
   const [showOverdueAlert, setShowOverdueAlert] = useState(false);
+  const [activityFeed, setActivityFeed] = useState([]);
 
   useEffect(() => {
     initAuth();
@@ -33,10 +35,12 @@ function App() {
     subscribeArchive(user.uid);
     subTeam();
     loadMembers();
+    const unsubActivity = subscribeActivity((feed) => setActivityFeed(feed));
     return () => {
       unsubPersonal();
       unsubscribeArchive();
       unsubTeam();
+      unsubActivity();
     };
   }, [user?.uid]);
 
@@ -241,7 +245,7 @@ function App() {
       {activeTab === 'todo'     && <PersonalTodo onSwitchToKanban={() => setActiveTab('kanban')} />}
       {activeTab === 'kanban'   && <KanbanBoard />}
       {activeTab === 'calendar' && <CalendarView />}
-      {activeTab === 'summary'  && <SummaryView />}
+      {activeTab === 'summary'  && <SummaryView activityFeed={activityFeed} />}
     </div>
   );
 }

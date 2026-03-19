@@ -135,7 +135,7 @@ function ArchiveList({ items, onRestore }) {
 }
 
 // ── 주간 완료율 차트 ──────────────────────────────────────
-function WeeklyChart({ archive, todos }) {
+function WeeklyChart({ archive, todos, cards }) {
   const days = useMemo(() => {
     const result = [];
     const today = new Date();
@@ -143,12 +143,15 @@ function WeeklyChart({ archive, todos }) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const ds = dateStr(d);
-      const completed = archive.filter((t) => t.archivedAt && fmtDate(t.archivedAt) === ds).length;
-      const created   = [...todos, ...archive].filter((t) => t.createdAt && fmtDate(new Date(t.createdAt)) === ds).length;
+      // 아카이브 완료 + 칸반 done 카드 (updatedAt 기준)
+      const archivedDone = archive.filter((t) => t.archivedAt && fmtDate(t.archivedAt) === ds).length;
+      const kanbanDone   = cards.filter((c) => c.status === 'done' && c.updatedAt && fmtDate(new Date(c.updatedAt)) === ds).length;
+      const completed    = archivedDone + kanbanDone;
+      const created      = [...todos, ...archive].filter((t) => t.createdAt && fmtDate(new Date(t.createdAt)) === ds).length;
       result.push({ ds, label: DAYS[d.getDay()], date: d.getDate(), completed, created, isToday: i === 0 });
     }
     return result;
-  }, [archive, todos]);
+  }, [archive, todos, cards]);
 
   const maxVal = Math.max(...days.map((d) => Math.max(d.completed, d.created)), 1);
 
@@ -285,6 +288,74 @@ function MemberKanbanStatus({ cards, members }) {
   );
 }
 
+// ── 활동 피드 ────────────────────────────────────────────
+function ActivityFeed({ items }) {
+  const fmtTime = (ts) => {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (m < 1)  return '방금 전';
+    if (m < 60) return `${m}분 전`;
+    if (h < 24) return `${h}시간 전`;
+    if (d < 7)  return `${d}일 전`;
+    return fmtDate(ts);
+  };
+
+  if (!items.length) {
+    return (
+      <div style={{ textAlign: 'center', padding: '32px 0', color: '#7a7a8e', fontSize: 13 }}>
+        아직 활동 기록이 없습니다
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 420, overflowY: 'auto', paddingRight: 2, scrollbarWidth: 'none' }}>
+      {items.map((item) => (
+        <div key={item.id} style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          padding: '10px 12px', borderRadius: 10,
+          transition: 'background .15s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#1a1a1f'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+          {/* 아이콘 */}
+          <div style={{ fontSize: 18, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{item.icon}</div>
+
+          {/* 내용 */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              {item.actorPhoto ? (
+                <img src={item.actorPhoto} alt={item.actorName}
+                  style={{ width: 16, height: 16, borderRadius: '50%', border: '1px solid #2e2e38' }} />
+              ) : (
+                <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#2e2e38',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#7a7a8e' }}>
+                  {item.actorName?.[0] || '?'}
+                </div>
+              )}
+              <span style={{ fontSize: 12, color: '#a78bfa', fontWeight: 600 }}>{item.actorName}</span>
+              <span style={{ fontSize: 11, color: '#7a7a8e' }}>{item.detail}</span>
+            </div>
+            <div style={{
+              fontSize: 13, color: '#e8e8f0',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {item.title}
+            </div>
+          </div>
+
+          {/* 시간 */}
+          <div style={{ fontSize: 10, color: '#55556a', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2 }}>
+            {fmtTime(item.createdAt)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── 평균 소요 시간 ────────────────────────────────────────
 function AvgCompletionTime({ archive }) {
   const stats = useMemo(() => {
@@ -326,7 +397,7 @@ function AvgCompletionTime({ archive }) {
 }
 
 // ── 메인 ─────────────────────────────────────────────────
-function SummaryView() {
+function SummaryView({ activityFeed = [] }) {
   const { todos, archive, restoreFromArchive } = usePersonalStore();
   const { user } = useAuthStore();
   const { cards, members } = useTeamStore();
@@ -432,12 +503,13 @@ function SummaryView() {
               const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 6);
               const wa = dateStr(weekAgo);
               const td = dateStr(today);
-              const wArchive = archive.filter((t) => t.archivedAt && fmtDate(t.archivedAt) >= wa && fmtDate(t.archivedAt) <= td);
-              const wTodos   = [...todos, ...archive].filter((t) => {
+              const wArchive   = archive.filter((t) => t.archivedAt && fmtDate(t.archivedAt) >= wa && fmtDate(t.archivedAt) <= td);
+              const wKanban    = cards.filter((c) => c.status === 'done' && c.updatedAt && fmtDate(new Date(c.updatedAt)) >= wa && fmtDate(new Date(c.updatedAt)) <= td);
+              const wTodos     = [...todos, ...archive].filter((t) => {
                 const ds = fmtDate(new Date(t.createdAt));
                 return ds >= wa && ds <= td;
               });
-              const wDone     = wArchive.length;
+              const wDone     = wArchive.length + wKanban.length;
               const wTotal    = wTodos.length;
               const wRate     = wTotal === 0 ? '0%' : Math.round((wDone / wTotal) * 100) + '%';
               const wOverdue  = todos.filter(isOverdue).length;
@@ -452,7 +524,7 @@ function SummaryView() {
 
           {/* 주간 완료 차트 */}
           <SectionTitle>일별 등록 / 완료</SectionTitle>
-          <WeeklyChart archive={archive} todos={todos} />
+          <WeeklyChart archive={archive} todos={todos} cards={cards} />
 
           {/* 멤버별 칸반 현황 */}
           <SectionTitle>멤버별 칸반 현황</SectionTitle>
@@ -462,6 +534,12 @@ function SummaryView() {
           <SectionTitle>완료 소요 시간</SectionTitle>
           <div style={{ marginBottom: 24 }}>
             <AvgCompletionTime archive={archive} />
+          </div>
+
+          {/* 활동 피드 */}
+          <SectionTitle count={activityFeed.length}>최근 활동</SectionTitle>
+          <div style={{ background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12, padding: '8px 4px', marginBottom: 24 }}>
+            <ActivityFeed items={activityFeed} />
           </div>
         </div>
       )}
@@ -498,6 +576,12 @@ function SummaryView() {
           <SectionTitle>완료 소요 시간</SectionTitle>
           <div style={{ marginBottom: 24 }}>
             <AvgCompletionTime archive={monthlyArchive} />
+          </div>
+
+          {/* 활동 피드 */}
+          <SectionTitle count={activityFeed.length}>최근 활동</SectionTitle>
+          <div style={{ background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12, padding: '8px 4px', marginBottom: 24 }}>
+            <ActivityFeed items={activityFeed} />
           </div>
 
           <SectionTitle count={monthlyArchive.length}>아카이브</SectionTitle>
@@ -561,6 +645,12 @@ function SummaryView() {
           <SectionTitle>완료 소요 시간</SectionTitle>
           <div style={{ marginBottom: 24 }}>
             <AvgCompletionTime archive={yearlyArchive} />
+          </div>
+
+          {/* 활동 피드 */}
+          <SectionTitle count={activityFeed.length}>최근 활동</SectionTitle>
+          <div style={{ background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12, padding: '8px 4px', marginBottom: 24 }}>
+            <ActivityFeed items={activityFeed} />
           </div>
 
           <SectionTitle count={yearlyArchive.length}>아카이브</SectionTitle>

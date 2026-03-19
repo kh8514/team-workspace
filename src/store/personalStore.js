@@ -14,6 +14,7 @@ import {
   restoreFromArchive,
 } from '../firebase/personal';
 import { addCard, getCardBySyncId, moveCard, deleteCard } from '../firebase/team';
+import { logActivity, buildActivity } from '../firebase/activity';
 
 const usePersonalStore = create((set, get) => ({
   todos: [],
@@ -62,6 +63,7 @@ const usePersonalStore = create((set, get) => ({
   // 투두 추가 (칸반 자동 생성 없음 — 공유 버튼으로 수동 공유)
   addTodo: async (uid, text, user, startDate = null, endDate = null, priority = 'medium') => {
     const ref = await addTodo(uid, text, null, startDate, endDate, priority);
+    if (user) await logActivity(buildActivity('todo_created', user, { text }));
     return { id: ref.key, text, startDate, endDate, priority, syncId: null };
   },
 
@@ -84,6 +86,9 @@ const usePersonalStore = create((set, get) => ({
 
     // 2. 투두에 syncId 저장
     await updateTodoSyncId(uid, todoId, syncId);
+
+    // 3. 활동 로그
+    if (user) await logActivity(buildActivity('todo_shared', user, { text: todo.text }));
   },
 
   // 칸반 공유 취소 (카드 삭제 + syncId 제거)
@@ -126,7 +131,7 @@ const usePersonalStore = create((set, get) => ({
   updateTodoPriority: (uid, todoId, priority) => updateTodoPriority(uid, todoId, priority),
 
   // 완료된 항목 아카이브 + 연결된 칸반 카드 삭제
-  archiveDoneTodos: async (uid) => {
+  archiveDoneTodos: async (uid, user) => {
     const { todos } = get();
     const doneTodos = todos.filter((t) => t.done);
     if (!doneTodos.length) return 0;
@@ -140,6 +145,9 @@ const usePersonalStore = create((set, get) => ({
     }
 
     await archiveTodos(uid, doneTodos.map((t) => t.id));
+
+    // 활동 로그
+    if (user) await logActivity(buildActivity('todo_archived', user, { count: doneTodos.length }));
     return doneTodos.length;
   },
 
