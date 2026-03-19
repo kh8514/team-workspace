@@ -9,6 +9,7 @@ import CalendarView from './components/CalendarView';
 import SummaryView from './components/SummaryView';
 import { subscribeActivity } from './firebase/activity';
 import { useBreakpoint } from './hooks/useBreakpoint';
+import { NotificationBell } from './components/NotificationSetup';
 
 const TABS = [
   { key: 'todo',     label: '📋', labelFull: '투두리스트' },
@@ -109,6 +110,7 @@ function App() {
           {!isMobile && (
             <span style={{ fontSize: 13, color: '#7a7a8e' }}>{user.displayName}</span>
           )}
+          <NotificationBell />
           <button
             onClick={logout}
             style={{
