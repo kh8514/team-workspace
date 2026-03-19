@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 import usePersonalStore from '../store/personalStore';
 import useAuthStore from '../store/authStore';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -34,6 +35,7 @@ const getTodosForDate = (todos, dateStr) => {
 function CalendarView() {
   const { todos, addTodo, shareTodoToKanban, updateTodo, updateTodoDates, deleteTodo } = usePersonalStore();
   const { user } = useAuthStore();
+  const { isMobile } = useBreakpoint();
   const today = todayYMD();
   const todayDate = new Date();
 
@@ -191,8 +193,8 @@ function CalendarView() {
               onClick={(e) => handleCellClick(e, cell)}
               style={{
                 background: isToday ? '#1d1b2e' : cell.otherMonth ? '#181820' : '#1a1a1f',
-                minHeight: 110,
-                padding: '8px 7px 6px',
+                minHeight: isMobile ? 60 : 110,
+                padding: isMobile ? '5px 4px 4px' : '8px 7px 6px',
                 cursor: 'pointer',
                 transition: 'background .15s',
                 position: 'relative',
@@ -207,10 +209,10 @@ function CalendarView() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                 <div style={{
                   fontFamily: 'Space Mono, monospace',
-                  fontSize: 12,
+                  fontSize: isMobile ? 10 : 12,
                   color: isToday ? '#fff' : cell.otherMonth ? 'rgba(122,122,142,.3)' : dow === 0 ? '#f87171' : dow === 6 ? '#60a5fa' : '#7a7a8e',
-                  width: 24,
-                  height: 24,
+                  width: isMobile ? 18 : 24,
+                  height: isMobile ? 18 : 24,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -245,9 +247,9 @@ function CalendarView() {
                       key={todo.id}
                       onClick={(e) => { e.stopPropagation(); setDateEditModal({ id: todo.id, text: todo.text, startDate: todo.startDate || '', endDate: todo.endDate || '' }); }}
                       style={{
-                        borderRadius: 4,
-                        fontSize: 10,
-                        padding: '2px 5px',
+                        borderRadius: 3,
+                        fontSize: isMobile ? 8 : 10,
+                        padding: isMobile ? '1px 3px' : '2px 5px',
                         lineHeight: 1.3,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -271,7 +273,7 @@ function CalendarView() {
       </div>
 
       {/* 범례 */}
-      <div style={{
+      {!isMobile && <div style={{
         display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 16,
         padding: '12px 16px', background: '#1a1a1f', border: '1.5px solid #2e2e38',
         borderRadius: 10, fontSize: 12, color: '#7a7a8e',
@@ -287,7 +289,7 @@ function CalendarView() {
             {item.label}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* 날짜 클릭 팝업 — CardDetail 스타일 */}
       {/* 날짜 변경 모달 */}

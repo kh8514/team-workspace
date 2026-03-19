@@ -62,6 +62,50 @@ input[type="date"] {
   color-scheme: dark;
 }
 
+/* ── 모바일 반응형 ── */
+@media (max-width: 639px) {
+  /* 칸반 컬럼 가로 스크롤 */
+  .kanban-columns {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    gap: 10px !important;
+    padding-bottom: 12px !important;
+    scroll-snap-type: x mandatory;
+  }
+  .kanban-column {
+    min-width: 78vw !important;
+    scroll-snap-align: start;
+  }
+
+  /* 달력 셀 */
+  .calendar-cell {
+    min-height: 64px !important;
+    padding: 4px !important;
+  }
+  .calendar-day-num {
+    font-size: 11px !important;
+  }
+  .calendar-event-chip {
+    font-size: 9px !important;
+    padding: 1px 4px !important;
+  }
+
+  /* 리포트 KPI 그리드 */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* 모달 풀스크린 */
+  .modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+}
+
 /* Scrollbar hidden */
 * {
   scrollbar-width: none; /* Firefox */

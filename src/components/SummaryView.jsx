@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import usePersonalStore from '../store/personalStore';
 import useAuthStore from '../store/authStore';
 import useTeamStore from '../store/teamStore';
+import { useBreakpoint } from '../hooks/useBreakpoint';
 
 const fmtDate = (ts) => {
   if (!ts) return '';
@@ -401,6 +402,7 @@ function SummaryView({ activityFeed = [] }) {
   const { todos, archive, restoreFromArchive } = usePersonalStore();
   const { user } = useAuthStore();
   const { cards, members } = useTeamStore();
+  const { isMobile } = useBreakpoint();
 
   const now = new Date();
   const [period, setPeriod] = useState('weekly'); // weekly | monthly | yearly
@@ -497,7 +499,7 @@ function SummaryView({ activityFeed = [] }) {
       {period === 'weekly' && (
         <div>
           {/* 주간 KPI */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+          <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
             {(() => {
               const today = new Date();
               const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 6);
@@ -556,7 +558,7 @@ function SummaryView({ activityFeed = [] }) {
             <TodayBtn onClick={() => { setSelYear(now.getFullYear()); setSelMonth(now.getMonth()); }} label="이번 달" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+          <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
             <KpiCard label="전체"    value={mTotal}   colorClass="accent"  sub="등록된 할 일" />
             <KpiCard label="완료"    value={mDone}    colorClass="success" sub="완료된 항목" />
             <KpiCard label="완료율"  value={mRate}    colorClass="warn"    sub={`${mDone}/${mTotal}`} />
@@ -601,7 +603,7 @@ function SummaryView({ activityFeed = [] }) {
             <TodayBtn onClick={() => setSelYear(now.getFullYear())} label="올해" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+          <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
             <KpiCard label="전체"    value={yTotal}   colorClass="accent"  sub="등록된 할 일" />
             <KpiCard label="완료"    value={yDone}    colorClass="success" sub="완료된 항목" />
             <KpiCard label="완료율"  value={yRate}    colorClass="warn"    sub={`${yDone}/${yTotal}`} />
@@ -611,9 +613,14 @@ function SummaryView({ activityFeed = [] }) {
           {/* 월별 완료 차트 */}
           <SectionTitle>월별 완료 현황</SectionTitle>
           <div style={{
+            overflowX: isMobile ? 'auto' : 'visible',
+            marginBottom: 24,
+          }}>
+          <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 8, alignItems: 'end',
             background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12,
-            padding: '20px 16px 14px', marginBottom: 24,
+            padding: '20px 16px 14px',
+            minWidth: isMobile ? 600 : 'auto',
           }}>
             {monthlyChartData.map((d) => {
               const barH = maxDone === 0 ? 2 : Math.max(2, Math.round((d.done / maxDone) * 80));
@@ -635,6 +642,8 @@ function SummaryView({ activityFeed = [] }) {
                 </div>
               );
             })}
+          </div>
+
           </div>
 
           {/* 멤버별 칸반 현황 */}

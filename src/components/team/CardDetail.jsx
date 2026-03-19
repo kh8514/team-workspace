@@ -3,6 +3,7 @@ import { X, Trash2, Send, Pencil } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useTeamStore from '../../store/teamStore';
 import { subscribeComments, addComment, deleteComment } from '../../firebase/team';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const PRIORITY_STYLE = {
   high:   { bg: 'rgba(248,113,113,.18)', color: '#f87171',  border: 'rgba(248,113,113,.3)',  label: '높음' },
@@ -42,6 +43,7 @@ const labelStyle = {
 function CardDetail({ card, onClose }) {
   const { user } = useAuthStore();
   const { members, updateCard, deleteCard } = useTeamStore();
+  const { isMobile } = useBreakpoint();
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -109,16 +111,18 @@ function CardDetail({ card, onClose }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 16,
       }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => !isMobile && e.target === e.currentTarget && onClose()}
     >
       <div
+        className="modal-card"
         style={{
           background: '#1a1a1f',
-          border: '1.5px solid #2e2e38',
-          borderRadius: 16,
+          border: isMobile ? 'none' : '1.5px solid #2e2e38',
+          borderRadius: isMobile ? 0 : 16,
           width: '100%',
-          maxWidth: 520,
-          maxHeight: '90vh',
+          maxWidth: isMobile ? '100%' : 520,
+          maxHeight: isMobile ? '100dvh' : '90vh',
+          height: isMobile ? '100dvh' : 'auto',
           overflowY: 'auto',
           animation: 'modalIn .2s ease',
         }}
