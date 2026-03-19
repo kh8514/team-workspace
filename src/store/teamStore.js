@@ -7,7 +7,7 @@ import {
   moveCard,
   deleteCard,
 } from '../firebase/team';
-import { setTodoDoneBySyncId, getTodoBySyncId, deleteTodo as deleteTodoFn, addTodo as addTodoFn, archiveTodos } from '../firebase/personal';
+import { setTodoDoneBySyncId, getTodoBySyncId, deleteTodo as deleteTodoFn, addTodo as addTodoFn, archiveTodos, updateTodoDates, updateTodoPriority } from '../firebase/personal';
 
 const useTeamStore = create((set, get) => ({
   cards: [],
@@ -68,7 +68,19 @@ const useTeamStore = create((set, get) => ({
       await addTodoFn(uid, cardData.title, syncId, today, today, cardData.priority || 'medium');
     }
   },
-  updateCard: (cardId, data) => updateCard(cardId, data),
+  // 카드 업데이트 → syncId 있으면 날짜/우선순위 투두에도 동기화
+  updateCard: async (cardId, data, card) => {
+    await updateCard(cardId, data);
+    if (!card?.syncId || !card?.assigneeId) return;
+    const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
+    if (!todo) return;
+    if ('startDate' in data || 'endDate' in data) {
+      await updateTodoDates(card.assigneeId, todo.id, data.startDate ?? null, data.endDate ?? null);
+    }
+    if ('priority' in data) {
+      await updateTodoPriority(card.assigneeId, todo.id, data.priority);
+    }
+  },
 
   // 카드 완료 처리 → 투두 아카이브 + 카드 삭제
   completeCard: async (cardId, card) => {

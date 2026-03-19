@@ -82,7 +82,7 @@ function KanbanCard({ card }) {
       startDate: dateModal.startDate || null,
       endDate: dateModal.endDate || null,
       dueDate: dateModal.endDate || null,
-    });
+    }, card);
     setDateModal(null);
   };
 
@@ -90,7 +90,7 @@ function KanbanCard({ card }) {
     e.stopPropagation();
     const current = card.priority || 'medium';
     const next = PRIORITY_CYCLE[(PRIORITY_CYCLE.indexOf(current) + 1) % PRIORITY_CYCLE.length];
-    updateCard(card.id, { priority: next });
+    updateCard(card.id, { priority: next }, card);
   };
 
   return (

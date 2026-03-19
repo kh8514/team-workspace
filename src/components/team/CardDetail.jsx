@@ -64,7 +64,7 @@ function CardDetail({ card, onClose }) {
     updateCard(card.id, {
       ...editData,
       dueDate: editData.endDate, // backward compat
-    });
+    }, card);
     setIsEditing(false);
   };
 
