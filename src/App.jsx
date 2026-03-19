@@ -132,6 +132,8 @@ function App() {
         maxWidth: 1200,
         margin: '0 auto 22px',
         animation: 'fadeDown .45s ease .05s both',
+        display: 'flex',
+        justifyContent: 'center',
       }}>
         <div style={{
           display: 'inline-flex',
