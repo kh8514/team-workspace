@@ -2,7 +2,6 @@ import { useState } from 'react';
 import useTeamStore from '../../store/teamStore';
 import useAuthStore from '../../store/authStore';
 import KanbanColumn from './KanbanColumn';
-import MobileKanbanBoard from './MobileKanbanBoard';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const COLUMNS = [
@@ -56,14 +55,11 @@ function KanbanBoard() {
   const filteredCards = getFilteredCards();
   const selectStyle = { ...SELECT_STYLE, padding: isMobile ? '10px 8px' : '12px 10px', fontSize: isMobile ? 12 : 13 };
 
-  // 모바일 전용 뷰
-  if (isMobile) return <MobileKanbanBoard />;
-
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', animation: 'fadeUp .4s ease' }}>
 
       {/* 입력 영역 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <input
           type="text"
           value={inputText}
@@ -122,27 +118,42 @@ function KanbanBoard() {
         </select>
       </div>
 
-      {/* 칸반 컬럼 — 모바일: 가로 스크롤 */}
-      <div className="kanban-columns" style={{
-        display: isTablet ? 'flex' : 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        flexDirection: isTablet ? 'row' : undefined,
-        overflowX: isTablet ? 'auto' : undefined,
-        gap: 12,
-        alignItems: 'start',
-        paddingBottom: isTablet ? 8 : 0,
-      }}>
-        {COLUMNS.map((col) => (
-          <div key={col.status} className="kanban-column" style={{ minWidth: isMobile ? '78vw' : isTablet ? '44vw' : undefined }}>
+      {/* 칸반 컬럼 */}
+      {isMobile ? (
+        /* 모바일: 컬럼 세로 스택 */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {COLUMNS.map((col) => (
             <KanbanColumn
+              key={col.status}
               status={col.status}
               title={col.title}
               colKey={col.colKey}
               cards={filteredCards.filter((c) => c.status === col.status)}
             />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        /* 태블릿/데스크탑: 그리드 or 가로 스크롤 */
+        <div style={{
+          display: isTablet ? 'flex' : 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          overflowX: isTablet ? 'auto' : undefined,
+          gap: 12,
+          alignItems: 'start',
+          paddingBottom: isTablet ? 8 : 0,
+        }}>
+          {COLUMNS.map((col) => (
+            <div key={col.status} style={{ minWidth: isTablet ? '44vw' : undefined }}>
+              <KanbanColumn
+                status={col.status}
+                title={col.title}
+                colKey={col.colKey}
+                cards={filteredCards.filter((c) => c.status === col.status)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
