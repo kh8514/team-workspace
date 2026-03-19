@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useTeamStore from '../../store/teamStore';
 import useAuthStore from '../../store/authStore';
 import KanbanColumn from './KanbanColumn';
+import MobileKanbanBoard from './MobileKanbanBoard';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 const COLUMNS = [
@@ -54,6 +55,9 @@ function KanbanBoard() {
 
   const filteredCards = getFilteredCards();
   const selectStyle = { ...SELECT_STYLE, padding: isMobile ? '10px 8px' : '12px 10px', fontSize: isMobile ? 12 : 13 };
+
+  // 모바일 전용 뷰
+  if (isMobile) return <MobileKanbanBoard />;
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', animation: 'fadeUp .4s ease' }}>
