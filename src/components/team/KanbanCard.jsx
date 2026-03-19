@@ -254,7 +254,7 @@ function KanbanCard({ card }) {
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button
-                onClick={() => { updateCard(card.id, { startDate: null, endDate: null, dueDate: null }); setDateModal(null); }}
+                onClick={() => { updateCard(card.id, { startDate: null, endDate: null, dueDate: null }, card); setDateModal(null); }}
                 style={{ flex: 1, background: 'rgba(248,113,113,.15)', border: 'none', borderRadius: 8, color: '#f87171', cursor: 'pointer', fontFamily: 'Noto Sans KR, sans-serif', fontSize: 14, fontWeight: 500, padding: 10 }}
               >
                 삭제

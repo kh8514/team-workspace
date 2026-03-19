@@ -1,0 +1,26 @@
+name: Saturday Auto Archive
+
+on:
+  schedule:
+    # 매주 토요일 00:00 KST (UTC 기준 금요일 15:00)
+    - cron: '0 15 * * 5'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install firebase-admin
+        run: npm install firebase-admin
+
+      - name: Run archive script
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+        run: node scripts/archive-done.cjs

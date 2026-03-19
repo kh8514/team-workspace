@@ -18,8 +18,10 @@ const TABS = [
 function App() {
   const { user, loading, initAuth, logout } = useAuthStore();
   const { subscribe: subPersonal, unsubscribeAll: unsubPersonal, subscribeArchive, unsubscribeArchive } = usePersonalStore();
-  const { subscribe: subTeam, unsubscribeAll: unsubTeam, loadMembers } = useTeamStore();
+  const { subscribe: subTeam, unsubscribeAll: unsubTeam, loadMembers, cards } = useTeamStore();
   const [activeTab, setActiveTab] = useState('todo');
+  const [overdueCards, setOverdueCards] = useState([]);
+  const [showOverdueAlert, setShowOverdueAlert] = useState(false);
 
   useEffect(() => {
     initAuth();
@@ -37,6 +39,17 @@ function App() {
       unsubTeam();
     };
   }, [user?.uid]);
+
+  // 마감일 초과 카드 감지
+  useEffect(() => {
+    if (!cards.length || !user) return;
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = cards.filter(
+      (c) => c.endDate && c.endDate < today && c.status !== 'done'
+    );
+    setOverdueCards(overdue);
+    if (overdue.length > 0) setShowOverdueAlert(true);
+  }, [cards, user]);
 
   // Date string
   const now = new Date();
@@ -126,6 +139,62 @@ function App() {
           </button>
         </div>
       </div>
+
+      {/* 마감일 초과 알림 배너 */}
+      {showOverdueAlert && overdueCards.length > 0 && (
+        <div style={{
+          maxWidth: 1200,
+          margin: '0 auto 14px',
+          background: 'rgba(248,113,113,.12)',
+          border: '1.5px solid rgba(248,113,113,.35)',
+          borderRadius: 10,
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          animation: 'fadeDown .3s ease',
+        }}>
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span style={{ fontSize: 13, color: '#fca5a5', flex: 1 }}>
+            마감일이 지난 칸반 카드가 <strong style={{ color: '#f87171' }}>{overdueCards.length}개</strong> 있습니다.
+            {overdueCards.length <= 3 && (
+              <span style={{ color: '#fca5a5', opacity: .8 }}>
+                {' '}({overdueCards.map((c) => c.title).join(', ')})
+              </span>
+            )}
+          </span>
+          <button
+            onClick={() => { setActiveTab('kanban'); setShowOverdueAlert(false); }}
+            style={{
+              background: 'rgba(248,113,113,.2)',
+              border: '1px solid rgba(248,113,113,.4)',
+              borderRadius: 6,
+              color: '#f87171',
+              cursor: 'pointer',
+              fontSize: 12,
+              padding: '4px 10px',
+              fontFamily: 'Noto Sans KR, sans-serif',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            칸반 보기
+          </button>
+          <button
+            onClick={() => setShowOverdueAlert(false)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#7a7a8e',
+              cursor: 'pointer',
+              fontSize: 16,
+              padding: '0 4px',
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* 뷰 탭 */}
       <div style={{
