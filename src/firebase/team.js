@@ -19,15 +19,17 @@ export const subscribeCards = (callback) => {
   return () => off(cardsRef);
 };
 
-// 멤버 목록 조회
-export const getMembers = async () => {
+// 멤버 목록 실시간 구독
+export const subscribeMembers = (callback) => {
   const membersRef = ref(db, 'members');
-  const snapshot = await get(membersRef);
-  if (snapshot.exists()) {
-    return Object.entries(snapshot.val())
-      .map(([uid, value]) => ({ uid, ...value }));
-  }
-  return [];
+  onValue(membersRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(Object.entries(snapshot.val()).map(([uid, value]) => ({ uid, ...value })));
+    } else {
+      callback([]);
+    }
+  });
+  return () => off(membersRef);
 };
 
 // 카드 추가 (syncId 포함)

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   subscribeCards,
-  getMembers,
+  subscribeMembers,
   addCard,
   updateCard,
   moveCard,
@@ -16,6 +16,7 @@ const useTeamStore = create((set, get) => ({
   cards: [],
   members: [],
   unsubscribe: null,
+  unsubscribeMembers: null,
   filterAssignee: 'all',
   filterPriority: 'all',
 
@@ -27,19 +28,16 @@ const useTeamStore = create((set, get) => ({
 
   // 구독 해제
   unsubscribeAll: () => {
-    const { unsubscribe } = get();
+    const { unsubscribe, unsubscribeMembers } = get();
     if (unsubscribe) unsubscribe();
-    set({ cards: [], unsubscribe: null });
+    if (unsubscribeMembers) unsubscribeMembers();
+    set({ cards: [], members: [], unsubscribe: null, unsubscribeMembers: null });
   },
 
-  // 멤버 목록 로드
-  loadMembers: async () => {
-    try {
-      const members = await getMembers();
-      set({ members });
-    } catch (err) {
-      console.error('멤버 목록 로드 실패:', err);
-    }
+  // 멤버 목록 실시간 구독
+  loadMembers: () => {
+    const unsubscribeMembers = subscribeMembers((members) => set({ members }));
+    set({ unsubscribeMembers });
   },
 
   // 필터

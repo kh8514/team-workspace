@@ -36,7 +36,7 @@ function App() {
     subPersonal(user.uid);
     subscribeArchive(user.uid);
     subTeam();
-    loadMembers().catch(() => {});
+    loadMembers();
     const unsubActivity = subscribeActivity((feed) => { if (!cancelled) setActivityFeed(feed); });
     return () => {
       cancelled = true;
