@@ -62,70 +62,95 @@ const usePersonalStore = create((set, get) => ({
 
   // 투두 추가 (칸반 자동 생성 없음 — 공유 버튼으로 수동 공유)
   addTodo: async (uid, text, user, startDate = null, endDate = null, priority = 'medium') => {
-    const ref = await addTodo(uid, text, null, startDate, endDate, priority);
-    if (user) await logActivity(buildActivity('todo_created', user, { text }));
-    return { id: ref.key, text, startDate, endDate, priority, syncId: null };
+    try {
+      const ref = await addTodo(uid, text, null, startDate, endDate, priority);
+      if (user) await logActivity(buildActivity('todo_created', user, { text }));
+      return { id: ref.key, text, startDate, endDate, priority, syncId: null };
+    } catch (err) {
+      console.error('투두 추가 실패:', err);
+      throw err;
+    }
   },
 
   // 투두를 칸반에 공유 (공유 버튼 클릭 시)
   shareTodoToKanban: async (uid, todoId, todo, user) => {
     const syncId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    try {
+      // 1. 칸반 카드 생성
+      await addCard({
+        title: todo.text,
+        syncId,
+        status: 'todo',
+        authorId: uid,
+        authorName: user.displayName,
+        assigneeId: uid,
+        priority: todo.priority || 'medium',
+        description: '',
+        dueDate: todo.endDate || '',
+      });
 
-    // 1. 칸반 카드 생성
-    await addCard({
-      title: todo.text,
-      syncId,
-      status: 'todo',
-      authorId: uid,
-      authorName: user.displayName,
-      assigneeId: uid,
-      priority: todo.priority || 'medium',
-      description: '',
-      dueDate: todo.endDate || '',
-    });
+      // 2. 투두에 syncId 저장
+      await updateTodoSyncId(uid, todoId, syncId);
 
-    // 2. 투두에 syncId 저장
-    await updateTodoSyncId(uid, todoId, syncId);
-
-    // 3. 활동 로그
-    if (user) await logActivity(buildActivity('todo_shared', user, { text: todo.text }));
+      // 3. 활동 로그
+      if (user) await logActivity(buildActivity('todo_shared', user, { text: todo.text }));
+    } catch (err) {
+      console.error('칸반 공유 실패:', err);
+      throw err;
+    }
   },
 
   // 칸반 공유 취소 (카드 삭제 + syncId 제거)
   cancelTodoShare: async (uid, todoId, syncId) => {
-    // 1. 칸반 카드 삭제
-    if (syncId) {
-      const card = await getCardBySyncId(syncId);
-      if (card) await deleteCard(card.id);
-    }
+    try {
+      // 1. 칸반 카드 삭제
+      if (syncId) {
+        const card = await getCardBySyncId(syncId);
+        if (card) await deleteCard(card.id);
+      }
 
-    // 2. 투두에서 syncId 제거
-    await updateTodoSyncId(uid, todoId, null);
+      // 2. 투두에서 syncId 제거
+      await updateTodoSyncId(uid, todoId, null);
+    } catch (err) {
+      console.error('칸반 공유 취소 실패:', err);
+      throw err;
+    }
   },
 
   // 완료 토글 → 칸반 카드 상태 동기화
   toggleTodo: async (uid, todoId, done, syncId) => {
-    // 1. 투두 토글
-    await toggleTodo(uid, todoId, done);
+    try {
+      // 1. 투두 토글
+      await toggleTodo(uid, todoId, done);
 
-    // 2. 칸반 카드 상태 변경
-    if (syncId) {
-      const card = await getCardBySyncId(syncId);
-      if (card) {
-        // done: true → 칸반 'done' / done: false → 칸반 'todo'
-        await moveCard(card.id, !done ? 'done' : 'todo');
+      // 2. 칸반 카드 상태 변경
+      if (syncId) {
+        const card = await getCardBySyncId(syncId);
+        if (card) {
+          // done: true → 칸반 'done' / done: false → 칸반 'todo'
+          await moveCard(card.id, !done ? 'done' : 'todo');
+        }
       }
+    } catch (err) {
+      console.error('투두 토글 실패:', err);
+      throw err;
     }
   },
 
   // 투두 삭제 → syncId 있으면 칸반 카드도 함께 삭제
   deleteTodo: async (uid, todoId, syncId) => {
-    if (syncId) {
-      const card = await getCardBySyncId(syncId);
-      if (card) await deleteCard(card.id);
+    try {
+      if (syncId) {
+        const card = await getCardBySyncId(syncId);
+        if (card) await deleteCard(card.id);
+      }
+      await deleteTodo(uid, todoId);
+    } catch (err) {
+      console.error('투두 삭제 실패:', err);
+      throw err;
     }
-    await deleteTodo(uid, todoId);
   },
+
   updateTodo: (uid, todoId, text) => updateTodo(uid, todoId, text),
   updateTodoDates: (uid, todoId, startDate, endDate) => updateTodoDates(uid, todoId, startDate, endDate),
   updateTodoPriority: (uid, todoId, priority) => updateTodoPriority(uid, todoId, priority),
@@ -136,19 +161,24 @@ const usePersonalStore = create((set, get) => ({
     const doneTodos = todos.filter((t) => t.done);
     if (!doneTodos.length) return 0;
 
-    // syncId 있는 항목은 칸반 카드도 삭제
-    for (const todo of doneTodos) {
-      if (todo.syncId) {
-        const card = await getCardBySyncId(todo.syncId);
-        if (card) await deleteCard(card.id);
+    try {
+      // syncId 있는 항목은 칸반 카드도 삭제
+      for (const todo of doneTodos) {
+        if (todo.syncId) {
+          const card = await getCardBySyncId(todo.syncId);
+          if (card) await deleteCard(card.id);
+        }
       }
+
+      await archiveTodos(uid, doneTodos.map((t) => t.id));
+
+      // 활동 로그
+      if (user) await logActivity(buildActivity('todo_archived', user, { count: doneTodos.length }));
+      return doneTodos.length;
+    } catch (err) {
+      console.error('아카이브 실패:', err);
+      throw err;
     }
-
-    await archiveTodos(uid, doneTodos.map((t) => t.id));
-
-    // 활동 로그
-    if (user) await logActivity(buildActivity('todo_archived', user, { count: doneTodos.length }));
-    return doneTodos.length;
   },
 
   // 아카이브에서 복원

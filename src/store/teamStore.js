@@ -34,8 +34,12 @@ const useTeamStore = create((set, get) => ({
 
   // 멤버 목록 로드
   loadMembers: async () => {
-    const members = await getMembers();
-    set({ members });
+    try {
+      const members = await getMembers();
+      set({ members });
+    } catch (err) {
+      console.error('멤버 목록 로드 실패:', err);
+    }
   },
 
   // 필터
@@ -44,83 +48,109 @@ const useTeamStore = create((set, get) => ({
 
   // 카드 이동 → 투두 완료 동기화
   moveCard: async (cardId, status, card, assigneeId, actor) => {
-    // 1. 칸반 카드 이동
-    await moveCard(cardId, status);
+    try {
+      // 1. 칸반 카드 이동
+      await moveCard(cardId, status);
 
-    // 2. syncId 있으면 투두 동기화
-    if (card.syncId && assigneeId) {
-      const isDone = status === 'done';
-      if (status === 'done' || card.status === 'done') {
-        await setTodoDoneBySyncId(assigneeId, card.syncId, isDone);
+      // 2. syncId 있으면 투두 동기화
+      if (card.syncId && assigneeId) {
+        const isDone = status === 'done';
+        if (status === 'done' || card.status === 'done') {
+          await setTodoDoneBySyncId(assigneeId, card.syncId, isDone);
+        }
       }
-    }
 
-    // 3. 활동 로그
-    if (actor) {
-      await logActivity(buildActivity('card_moved', actor, {
-        title: card.title,
-        from: STATUS_LABEL[card.status] || card.status,
-        to:   STATUS_LABEL[status] || status,
-      }));
+      // 3. 활동 로그
+      if (actor) {
+        await logActivity(buildActivity('card_moved', actor, {
+          title: card.title,
+          from: STATUS_LABEL[card.status] || card.status,
+          to:   STATUS_LABEL[status] || status,
+        }));
+      }
+    } catch (err) {
+      console.error('카드 이동 실패:', err);
+      throw err;
     }
   },
 
   // CRUD
   // 칸반 카드 추가 → 개인 투두에도 공유 상태로 추가 (오늘 날짜)
   addCard: async (cardData, actor) => {
-    const syncId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    try {
+      const syncId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    await addCard({ ...cardData, syncId, startDate: today, endDate: today, dueDate: today });
+      await addCard({ ...cardData, syncId, startDate: today, endDate: today, dueDate: today });
 
-    const uid = cardData.assigneeId || cardData.authorId;
-    if (uid) {
-      await addTodoFn(uid, cardData.title, syncId, today, today, cardData.priority || 'medium');
-    }
+      const uid = cardData.assigneeId || cardData.authorId;
+      if (uid) {
+        await addTodoFn(uid, cardData.title, syncId, today, today, cardData.priority || 'medium');
+      }
 
-    // 활동 로그
-    if (actor) {
-      await logActivity(buildActivity('card_created', actor, { title: cardData.title }));
+      // 활동 로그
+      if (actor) {
+        await logActivity(buildActivity('card_created', actor, { title: cardData.title }));
+      }
+    } catch (err) {
+      console.error('카드 추가 실패:', err);
+      throw err;
     }
   },
+
   // 카드 업데이트 → syncId 있으면 날짜/우선순위 투두에도 동기화
   updateCard: async (cardId, data, card) => {
-    await updateCard(cardId, data);
-    if (!card?.syncId || !card?.assigneeId) return;
-    const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
-    if (!todo) return;
-    if ('startDate' in data || 'endDate' in data) {
-      await updateTodoDates(card.assigneeId, todo.id, data.startDate ?? null, data.endDate ?? null);
-    }
-    if ('priority' in data) {
-      await updateTodoPriority(card.assigneeId, todo.id, data.priority);
+    try {
+      await updateCard(cardId, data);
+      if (!card?.syncId || !card?.assigneeId) return;
+      const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
+      if (!todo) return;
+      if ('startDate' in data || 'endDate' in data) {
+        await updateTodoDates(card.assigneeId, todo.id, data.startDate ?? null, data.endDate ?? null);
+      }
+      if ('priority' in data) {
+        await updateTodoPriority(card.assigneeId, todo.id, data.priority);
+      }
+    } catch (err) {
+      console.error('카드 수정 실패:', err);
+      throw err;
     }
   },
 
   // 카드 완료 처리 → 투두 아카이브 + 카드 삭제
   completeCard: async (cardId, card, actor) => {
-    if (card?.syncId && card?.assigneeId) {
-      const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
-      if (todo) await archiveTodos(card.assigneeId, [todo.id]);
-    }
-    await deleteCard(cardId);
+    try {
+      if (card?.syncId && card?.assigneeId) {
+        const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
+        if (todo) await archiveTodos(card.assigneeId, [todo.id]);
+      }
+      await deleteCard(cardId);
 
-    if (actor) {
-      await logActivity(buildActivity('card_completed', actor, { title: card.title }));
+      if (actor) {
+        await logActivity(buildActivity('card_completed', actor, { title: card.title }));
+      }
+    } catch (err) {
+      console.error('카드 완료 처리 실패:', err);
+      throw err;
     }
   },
 
   // 카드 삭제 → syncId 있으면 연결된 투두도 함께 삭제
   deleteCard: async (cardId, card, actor) => {
-    if (card?.syncId && card?.assigneeId) {
-      const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
-      if (todo) await deleteTodoFn(card.assigneeId, todo.id);
-    }
-    await deleteCard(cardId);
+    try {
+      if (card?.syncId && card?.assigneeId) {
+        const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
+        if (todo) await deleteTodoFn(card.assigneeId, todo.id);
+      }
+      await deleteCard(cardId);
 
-    if (actor) {
-      await logActivity(buildActivity('card_deleted', actor, { title: card?.title || '' }));
+      if (actor) {
+        await logActivity(buildActivity('card_deleted', actor, { title: card?.title || '' }));
+      }
+    } catch (err) {
+      console.error('카드 삭제 실패:', err);
+      throw err;
     }
   },
 

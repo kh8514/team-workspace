@@ -1,4 +1,5 @@
 import { db } from './config';
+import { auth } from './config';
 import { ref, push, update, remove, onValue, off, get } from 'firebase/database';
 
 // 칸반 카드 실시간 구독
@@ -51,9 +52,15 @@ export const moveCard = (cardId, status) => {
   return update(cardRef, { status, updatedAt: Date.now() });
 };
 
-// 카드 삭제
-export const deleteCard = (cardId) => {
+// 카드 삭제 (작성자만 가능)
+export const deleteCard = async (cardId) => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('로그인이 필요합니다.');
   const cardRef = ref(db, `team/${cardId}`);
+  const snapshot = await get(cardRef);
+  if (snapshot.exists() && snapshot.val().authorId !== uid) {
+    throw new Error('카드 작성자만 삭제할 수 있습니다.');
+  }
   return remove(cardRef);
 };
 
@@ -93,8 +100,14 @@ export const addComment = (cardId, commentData) => {
   });
 };
 
-// 댓글 삭제
-export const deleteComment = (cardId, commentId) => {
+// 댓글 삭제 (작성자만 가능)
+export const deleteComment = async (cardId, commentId) => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('로그인이 필요합니다.');
   const commentRef = ref(db, `comments/${cardId}/${commentId}`);
+  const snapshot = await get(commentRef);
+  if (snapshot.exists() && snapshot.val().authorId !== uid) {
+    throw new Error('댓글 작성자만 삭제할 수 있습니다.');
+  }
   return remove(commentRef);
 };

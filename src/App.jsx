@@ -32,12 +32,14 @@ function App() {
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     subPersonal(user.uid);
     subscribeArchive(user.uid);
     subTeam();
-    loadMembers();
-    const unsubActivity = subscribeActivity((feed) => setActivityFeed(feed));
+    loadMembers().catch(() => {});
+    const unsubActivity = subscribeActivity((feed) => { if (!cancelled) setActivityFeed(feed); });
     return () => {
+      cancelled = true;
       unsubPersonal();
       unsubscribeArchive();
       unsubTeam();

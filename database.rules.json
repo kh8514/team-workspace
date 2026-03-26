@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "team": {
+      ".read": "auth != null",
+      "$cardId": {
+        ".write": "auth != null && (!data.exists() || newData.exists() || (!newData.exists() && data.child('authorId').val() == auth.uid))"
+      }
+    },
+
+    "personal": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+
+    "members": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+
+    "comments": {
+      "$cardId": {
+        ".read": "auth != null",
+        "$commentId": {
+          ".write": "auth != null && (!data.exists() || (!newData.exists() && data.child('authorId').val() == auth.uid))"
+        }
+      }
+    },
+
+    "activity": {
+      ".read": "auth != null",
+      "$activityId": {
+        ".write": "auth != null && !data.exists()"
+      }
+    },
+
+    "fcmTokens": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    }
+  }
+}
