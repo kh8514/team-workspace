@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react';
 import useTeamStore from '../../store/teamStore';
+import useAuthStore from '../../store/authStore';
 import KanbanCard from './KanbanCard';
 import { COL_COLORS } from '../../constants/status';
 import { COLORS } from '../../constants/theme';
 
 function KanbanColumn({ status, title, colKey, cards, isMobile = false }) {
   const { moveCard, cards: allCards } = useTeamStore();
+  const { user } = useAuthStore();
   const dotColor = COL_COLORS[colKey] || COL_COLORS.todo;
   const [dragOver, setDragOver] = useState(false);
   const scrollRef = useRef(null);
@@ -25,6 +27,7 @@ function KanbanColumn({ status, title, colKey, cards, isMobile = false }) {
     if (!cardId) return;
     const card = allCards.find((c) => c.id === cardId);
     if (!card || card.status === status) return;
+    if (card.authorId !== user?.uid) return;
     moveCard(cardId, status, card, assigneeId);
   };
 

@@ -15,6 +15,8 @@ function KanbanCard({ card }) {
   const [hovered, setHovered] = useState(false);
   const [dateModal, setDateModal] = useState(null);
 
+  const isAuthor = card.authorId === user.uid;
+
   const assignee = members.find((m) => m.uid === card.assigneeId);
   const ps = PRIORITY_STYLE[card.priority] || PRIORITY_STYLE.medium;
   const startDate = card.startDate || '';
@@ -77,21 +79,21 @@ function KanbanCard({ card }) {
   return (
     <>
       <div
-        draggable
-        onDragStart={(e) => {
+        draggable={isAuthor}
+        onDragStart={isAuthor ? (e) => {
           e.dataTransfer.setData('cardId', card.id);
           e.dataTransfer.setData('assigneeId', card.assigneeId || '');
           e.dataTransfer.effectAllowed = 'move';
           setTimeout(() => (e.target.style.opacity = '0.4'), 0);
-        }}
-        onDragEnd={(e) => (e.target.style.opacity = '1')}
+        } : undefined}
+        onDragEnd={isAuthor ? (e) => (e.target.style.opacity = '1') : undefined}
         onClick={() => setShowDetail(true)}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           background: COLORS.bgInput,
           border: `1.5px solid ${hovered ? COLORS.borderHover : COLORS.border}`,
-          borderRadius: 10, padding: '11px 13px', cursor: 'grab',
+          borderRadius: 10, padding: '11px 13px', cursor: isAuthor ? 'grab' : 'pointer',
           transition: 'border-color .15s, transform .15s, box-shadow .15s',
           transform: hovered ? 'translateY(-1px)' : 'none',
           boxShadow: hovered ? '0 4px 16px rgba(0,0,0,.3)' : 'none',
@@ -125,26 +127,29 @@ function KanbanCard({ card }) {
 
         {/* 카드 푸터 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          {/* 이동 버튼 */}
-          <div style={{ display: 'flex', gap: 4, flex: 1, opacity: hovered ? 1 : 0, transition: 'opacity .15s' }}>
-            {prevStatus && <MoveBtn onClick={(e) => handleMove(e, prevStatus)}>← {STATUS_LABEL[prevStatus]}</MoveBtn>}
-            {nextStatus && <MoveBtn onClick={(e) => handleMove(e, nextStatus)}>→ {STATUS_LABEL[nextStatus]}</MoveBtn>}
-            {card.status === 'done' && (
-              <button
-                onClick={(e) => { e.stopPropagation(); completeCard(card.id, card); }}
-                style={{
-                  background: 'rgba(52,211,153,.12)', border: '1.5px solid rgba(52,211,153,.35)',
-                  borderRadius: 5, color: COLORS.success, cursor: 'pointer', fontSize: 11,
-                  padding: '2px 9px', transition: 'all .13s', whiteSpace: 'nowrap',
-                  fontFamily: 'Noto Sans KR, sans-serif',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(52,211,153,.22)'; e.currentTarget.style.borderColor = COLORS.success; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(52,211,153,.12)'; e.currentTarget.style.borderColor = 'rgba(52,211,153,.35)'; }}
-              >
-                ✓ 완료
-              </button>
-            )}
-          </div>
+          {/* 이동 버튼: 작성자만 표시 */}
+          {isAuthor && (
+            <div style={{ display: 'flex', gap: 4, flex: 1, opacity: hovered ? 1 : 0, transition: 'opacity .15s' }}>
+              {prevStatus && <MoveBtn onClick={(e) => handleMove(e, prevStatus)}>← {STATUS_LABEL[prevStatus]}</MoveBtn>}
+              {nextStatus && <MoveBtn onClick={(e) => handleMove(e, nextStatus)}>→ {STATUS_LABEL[nextStatus]}</MoveBtn>}
+              {card.status === 'done' && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); completeCard(card.id, card); }}
+                  style={{
+                    background: 'rgba(52,211,153,.12)', border: '1.5px solid rgba(52,211,153,.35)',
+                    borderRadius: 5, color: COLORS.success, cursor: 'pointer', fontSize: 11,
+                    padding: '2px 9px', transition: 'all .13s', whiteSpace: 'nowrap',
+                    fontFamily: 'Noto Sans KR, sans-serif',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(52,211,153,.22)'; e.currentTarget.style.borderColor = COLORS.success; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(52,211,153,.12)'; e.currentTarget.style.borderColor = 'rgba(52,211,153,.35)'; }}
+                >
+                  ✓ 완료
+                </button>
+              )}
+            </div>
+          )}
+          {!isAuthor && <div style={{ flex: 1 }} />}
 
           {/* 우선순위 배지 */}
           <button
