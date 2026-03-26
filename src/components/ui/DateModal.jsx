@@ -17,7 +17,10 @@ function DateModal({ startDate, endDate, onChange, onSave, onDelete, onClose }) 
           <input
             type="date"
             value={startDate}
-            onChange={(e) => onChange({ startDate: e.target.value, endDate })}
+            onChange={(e) => {
+              const newStart = e.target.value;
+              onChange({ startDate: newStart, endDate: (!endDate || endDate < newStart) ? newStart : endDate });
+            }}
             style={{ ...STYLE.input, width: '100%' }}
             onFocus={(e) => (e.target.style.borderColor = COLORS.accent)}
             onBlur={(e) => (e.target.style.borderColor = COLORS.border)}
