@@ -23,12 +23,11 @@ function KanbanColumn({ status, title, colKey, cards, isMobile = false }) {
     e.preventDefault();
     setDragOver(false);
     const cardId = e.dataTransfer.getData('cardId');
-    const assigneeId = e.dataTransfer.getData('assigneeId');
     if (!cardId) return;
     const card = allCards.find((c) => c.id === cardId);
     if (!card || card.status === status) return;
     if (card.authorId !== user?.uid) return;
-    moveCard(cardId, status, card, assigneeId);
+    moveCard(cardId, status, card);
   };
 
   const handleScroll = () => {

@@ -39,6 +39,7 @@ function KanbanBoard() {
       authorId: user.uid,
       authorName: user.displayName,
       assigneeId: user.uid,
+      assigneeIds: [user.uid],
       description: '',
       dueDate: '',
     }, user);

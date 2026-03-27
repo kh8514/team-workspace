@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Trash2, Send, Pencil } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-import useTeamStore from '../../store/teamStore';
+import useTeamStore, { getAssigneeIds } from '../../store/teamStore';
 import { subscribeComments, addComment, deleteComment } from '../../firebase/team';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 
@@ -50,12 +50,20 @@ function CardDetail({ card, onClose }) {
   const [editData, setEditData] = useState({
     title: card.title,
     description: card.description || '',
-    assigneeId: card.assigneeId || '',
+    assigneeIds: getAssigneeIds(card),
     priority: card.priority || 'medium',
     startDate: card.startDate || '',
     endDate: card.endDate || card.dueDate || '',
     status: card.status,
   });
+
+  const toggleAssignee = (uid) => {
+    const ids = editData.assigneeIds;
+    setEditData({
+      ...editData,
+      assigneeIds: ids.includes(uid) ? ids.filter((id) => id !== uid) : [...ids, uid],
+    });
+  };
 
   useEffect(() => {
     const unsub = subscribeComments(card.id, setComments);
@@ -65,7 +73,8 @@ function CardDetail({ card, onClose }) {
   const handleUpdate = () => {
     updateCard(card.id, {
       ...editData,
-      dueDate: editData.endDate, // backward compat
+      assigneeId: editData.assigneeIds[0] || null,
+      dueDate: editData.endDate,
     }, card);
     setIsEditing(false);
   };
@@ -88,7 +97,7 @@ function CardDetail({ card, onClose }) {
     setCommentText('');
   };
 
-  const assignee = members.find((m) => m.uid === card.assigneeId);
+  const cardAssignees = getAssigneeIds(card).map((id) => members.find((m) => m.uid === id)).filter(Boolean);
   const ps = PRIORITY_STYLE[card.priority] || PRIORITY_STYLE.medium;
   const statusLabel = STATUS_OPTIONS.find((s) => s.key === card.status)?.label || card.status;
 
@@ -202,20 +211,35 @@ function CardDetail({ card, onClose }) {
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
+                <div style={{ gridColumn: '1 / -1' }}>
                   <label style={labelStyle}>담당자</label>
-                  <select
-                    value={editData.assigneeId}
-                    onChange={(e) => setEditData({ ...editData, assigneeId: e.target.value })}
-                    style={{ ...inputStyle }}
-                    onFocus={(e) => e.target.style.borderColor = '#7c6af7'}
-                    onBlur={(e) => e.target.style.borderColor = '#2e2e38'}
-                  >
-                    <option value="">미지정</option>
-                    {members.map((m) => (
-                      <option key={m.uid} value={m.uid}>{m.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {members.map((m) => {
+                      const selected = editData.assigneeIds.includes(m.uid);
+                      return (
+                        <button
+                          key={m.uid}
+                          type="button"
+                          onClick={() => toggleAssignee(m.uid)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '5px 10px', borderRadius: 20, cursor: 'pointer',
+                            fontSize: 12, fontFamily: 'Noto Sans KR, sans-serif',
+                            border: `1.5px solid ${selected ? '#7c6af7' : '#2e2e38'}`,
+                            background: selected ? 'rgba(124,106,247,.15)' : '#23232b',
+                            color: selected ? '#a78bfa' : '#7a7a8e',
+                            transition: 'all .15s',
+                          }}
+                        >
+                          {m.photoURL
+                            ? <img src={m.photoURL} alt={m.name} style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                            : <div style={{ width: 16, height: 16, borderRadius: '50%', background: selected ? '#7c6af7' : '#3e3e50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: '#fff' }}>{m.name?.[0]}</div>
+                          }
+                          {m.name}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div>
                   <label style={labelStyle}>우선순위</label>
@@ -300,13 +324,17 @@ function CardDetail({ card, onClose }) {
                 {/* 담당자 */}
                 <div style={{ background: '#23232b', borderRadius: 10, padding: '12px 14px' }}>
                   <p style={{ fontSize: 11, color: '#7a7a8e', fontWeight: 600, marginBottom: 6, letterSpacing: '.3px' }}>담당자</p>
-                  {assignee ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {assignee.photoURL
-                        ? <img src={assignee.photoURL} alt={assignee.name} style={{ width: 20, height: 20, borderRadius: '50%' }} />
-                        : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#7c6af7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#fff' }}>{assignee.name?.[0]}</div>
-                      }
-                      <span style={{ fontSize: 13, color: '#e8e8f0', fontWeight: 500 }}>{assignee.name}</span>
+                  {cardAssignees.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {cardAssignees.map((a) => (
+                        <div key={a.uid} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {a.photoURL
+                            ? <img src={a.photoURL} alt={a.name} style={{ width: 20, height: 20, borderRadius: '50%' }} />
+                            : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#7c6af7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#fff' }}>{a.name?.[0]}</div>
+                          }
+                          <span style={{ fontSize: 13, color: '#e8e8f0', fontWeight: 500 }}>{a.name}</span>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <span style={{ fontSize: 13, color: '#7a7a8e' }}>미지정</span>

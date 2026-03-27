@@ -1,4 +1,5 @@
 import { STATUS_LABEL, STATUS_COLOR } from '../../constants/status';
+import { getAssigneeIds } from '../../store/teamStore';
 
 const STATUS_ORDER = ['todo', 'inProgress', 'review', 'done'];
 
@@ -10,7 +11,7 @@ function MemberKanbanStatus({ cards, members }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
       {members.map((member) => {
-        const memberCards = cards.filter((c) => c.assigneeId === member.id);
+        const memberCards = cards.filter((c) => getAssigneeIds(c).includes(member.id));
         if (!memberCards.length) return null;
         const total = memberCards.length;
         const done  = memberCards.filter((c) => c.status === 'done').length;

@@ -84,6 +84,7 @@ const usePersonalStore = create((set, get) => ({
         authorId: uid,
         authorName: user.displayName,
         assigneeId: uid,
+        assigneeIds: [uid],
         priority: todo.priority || 'medium',
         description: '',
         dueDate: todo.endDate || '',

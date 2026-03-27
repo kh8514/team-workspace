@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import useTeamStore from '../../store/teamStore';
+import useTeamStore, { getAssigneeIds } from '../../store/teamStore';
 import useAuthStore from '../../store/authStore';
 import CardDetail from './CardDetail';
 import DateModal from '../ui/DateModal';
@@ -17,7 +17,8 @@ function KanbanCard({ card }) {
 
   const isAuthor = card.authorId === user.uid;
 
-  const assignee = members.find((m) => m.uid === card.assigneeId);
+  const assigneeIds = getAssigneeIds(card);
+  const assignees = assigneeIds.map((id) => members.find((m) => m.uid === id)).filter(Boolean);
   const ps = PRIORITY_STYLE[card.priority] || PRIORITY_STYLE.medium;
   const startDate = card.startDate || '';
   const endDate = card.endDate || card.dueDate || '';
@@ -31,7 +32,7 @@ function KanbanCard({ card }) {
 
   const handleMove = (e, status) => {
     e.stopPropagation();
-    moveCard(card.id, status, card, card.assigneeId);
+    moveCard(card.id, status, card);
   };
 
   const openDateModal = (e) => {
@@ -82,7 +83,6 @@ function KanbanCard({ card }) {
         draggable={isAuthor}
         onDragStart={isAuthor ? (e) => {
           e.dataTransfer.setData('cardId', card.id);
-          e.dataTransfer.setData('assigneeId', card.assigneeId || '');
           e.dataTransfer.effectAllowed = 'move';
           setTimeout(() => (e.target.style.opacity = '0.4'), 0);
         } : undefined}
@@ -167,18 +167,33 @@ function KanbanCard({ card }) {
             {ps.label}
           </button>
 
-          {/* 담당자 아바타 */}
-          {assignee && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              {assignee.photoURL ? (
-                <img src={assignee.photoURL} alt={assignee.name}
-                  style={{ width: 18, height: 18, borderRadius: '50%', border: `1px solid ${COLORS.border}` }} />
-              ) : (
+          {/* 담당자 아바타 (다중) */}
+          {assignees.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              {assignees.slice(0, 3).map((a, i) => (
+                <div key={a.uid} title={a.name} style={{ marginLeft: i === 0 ? 0 : -6, zIndex: assignees.length - i }}>
+                  {a.photoURL ? (
+                    <img src={a.photoURL} alt={a.name}
+                      style={{ width: 18, height: 18, borderRadius: '50%', border: `1.5px solid ${COLORS.bgInput}` }} />
+                  ) : (
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', background: COLORS.accent,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff',
+                      border: `1.5px solid ${COLORS.bgInput}`,
+                    }}>
+                      {a.name?.[0]}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {assignees.length > 3 && (
                 <div style={{
-                  width: 18, height: 18, borderRadius: '50%', background: COLORS.accent,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff',
+                  marginLeft: -6, width: 18, height: 18, borderRadius: '50%',
+                  background: COLORS.bgCard, border: `1.5px solid ${COLORS.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 8, color: COLORS.textSecondary,
                 }}>
-                  {assignee.name?.[0]}
+                  +{assignees.length - 3}
                 </div>
               )}
             </div>

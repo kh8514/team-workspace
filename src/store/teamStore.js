@@ -12,6 +12,13 @@ import { logActivity, buildActivity } from '../firebase/activity';
 
 const STATUS_LABEL = { todo: '할 일', inProgress: '진행 중', review: '검토', done: '완료' };
 
+// 하위 호환: assigneeIds 배열 반환 (구 assigneeId 필드 지원)
+export const getAssigneeIds = (card) =>
+  card.assigneeIds?.length ? card.assigneeIds : (card.assigneeId ? [card.assigneeId] : []);
+
+// 주 담당자 (syncId 연동용)
+const getPrimaryAssigneeId = (card) => getAssigneeIds(card)[0] || null;
+
 const useTeamStore = create((set, get) => ({
   cards: [],
   members: [],
@@ -44,21 +51,19 @@ const useTeamStore = create((set, get) => ({
   setFilterAssignee: (value) => set({ filterAssignee: value }),
   setFilterPriority: (value) => set({ filterPriority: value }),
 
-  // 카드 이동 → 투두 완료 동기화
-  moveCard: async (cardId, status, card, assigneeId, actor) => {
+  // 카드 이동 → 주 담당자 투두 완료 동기화
+  moveCard: async (cardId, status, card, actor) => {
     try {
-      // 1. 칸반 카드 이동
       await moveCard(cardId, status);
 
-      // 2. syncId 있으면 투두 동기화
-      if (card.syncId && assigneeId) {
+      const primaryId = getPrimaryAssigneeId(card);
+      if (card.syncId && primaryId) {
         const isDone = status === 'done';
         if (status === 'done' || card.status === 'done') {
-          await setTodoDoneBySyncId(assigneeId, card.syncId, isDone);
+          await setTodoDoneBySyncId(primaryId, card.syncId, isDone);
         }
       }
 
-      // 3. 활동 로그
       if (actor) {
         await logActivity(buildActivity('card_moved', actor, {
           title: card.title,
@@ -72,22 +77,22 @@ const useTeamStore = create((set, get) => ({
     }
   },
 
-  // CRUD
-  // 칸반 카드 추가 → 개인 투두에도 공유 상태로 추가 (오늘 날짜)
+  // 칸반 카드 추가
   addCard: async (cardData, actor) => {
     try {
       const syncId = Date.now().toString(36) + Math.random().toString(36).slice(2);
       const d = new Date();
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-      await addCard({ ...cardData, syncId, startDate: today, endDate: today, dueDate: today });
+      const assigneeIds = cardData.assigneeIds?.length ? cardData.assigneeIds : (cardData.assigneeId ? [cardData.assigneeId] : []);
+      const assigneeId = assigneeIds[0] || cardData.authorId;
 
-      const uid = cardData.assigneeId || cardData.authorId;
-      if (uid) {
-        await addTodoFn(uid, cardData.title, syncId, today, today, cardData.priority || 'medium');
+      await addCard({ ...cardData, assigneeIds, assigneeId, syncId, startDate: today, endDate: today, dueDate: today });
+
+      if (assigneeId) {
+        await addTodoFn(assigneeId, cardData.title, syncId, today, today, cardData.priority || 'medium');
       }
 
-      // 활동 로그
       if (actor) {
         await logActivity(buildActivity('card_created', actor, { title: cardData.title }));
       }
@@ -97,18 +102,25 @@ const useTeamStore = create((set, get) => ({
     }
   },
 
-  // 카드 업데이트 → syncId 있으면 날짜/우선순위 투두에도 동기화
+  // 카드 업데이트 → 주 담당자 투두 날짜/우선순위 동기화
   updateCard: async (cardId, data, card) => {
     try {
-      await updateCard(cardId, data);
-      if (!card?.syncId || !card?.assigneeId) return;
-      const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
+      // assigneeIds 변경 시 assigneeId(주 담당자)도 함께 업데이트
+      const updateData = { ...data };
+      if (data.assigneeIds) {
+        updateData.assigneeId = data.assigneeIds[0] || null;
+      }
+      await updateCard(cardId, updateData);
+
+      const primaryId = getPrimaryAssigneeId(card);
+      if (!card?.syncId || !primaryId) return;
+      const todo = await getTodoBySyncId(primaryId, card.syncId);
       if (!todo) return;
       if ('startDate' in data || 'endDate' in data) {
-        await updateTodoDates(card.assigneeId, todo.id, data.startDate ?? null, data.endDate ?? null);
+        await updateTodoDates(primaryId, todo.id, data.startDate ?? null, data.endDate ?? null);
       }
       if ('priority' in data) {
-        await updateTodoPriority(card.assigneeId, todo.id, data.priority);
+        await updateTodoPriority(primaryId, todo.id, data.priority);
       }
     } catch (err) {
       console.error('카드 수정 실패:', err);
@@ -116,12 +128,13 @@ const useTeamStore = create((set, get) => ({
     }
   },
 
-  // 카드 완료 처리 → 투두 아카이브 + 카드 삭제
+  // 카드 완료 처리 → 주 담당자 투두 아카이브 + 카드 삭제
   completeCard: async (cardId, card, actor) => {
     try {
-      if (card?.syncId && card?.assigneeId) {
-        const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
-        if (todo) await archiveTodos(card.assigneeId, [todo.id]);
+      const primaryId = getPrimaryAssigneeId(card);
+      if (card?.syncId && primaryId) {
+        const todo = await getTodoBySyncId(primaryId, card.syncId);
+        if (todo) await archiveTodos(primaryId, [todo.id]);
       }
       await deleteCard(cardId);
 
@@ -134,12 +147,13 @@ const useTeamStore = create((set, get) => ({
     }
   },
 
-  // 카드 삭제 → syncId 있으면 연결된 투두도 함께 삭제
+  // 카드 삭제 → 주 담당자 투두도 함께 삭제
   deleteCard: async (cardId, card, actor) => {
     try {
-      if (card?.syncId && card?.assigneeId) {
-        const todo = await getTodoBySyncId(card.assigneeId, card.syncId);
-        if (todo) await deleteTodoFn(card.assigneeId, todo.id);
+      const primaryId = getPrimaryAssigneeId(card);
+      if (card?.syncId && primaryId) {
+        const todo = await getTodoBySyncId(primaryId, card.syncId);
+        if (todo) await deleteTodoFn(primaryId, todo.id);
       }
       await deleteCard(cardId);
 
@@ -152,11 +166,12 @@ const useTeamStore = create((set, get) => ({
     }
   },
 
-  // 필터링된 카드
+  // 필터링된 카드 (assigneeIds 배열 지원)
   getFilteredCards: () => {
     const { cards, filterAssignee, filterPriority } = get();
     return cards.filter((card) => {
-      const matchAssignee = filterAssignee === 'all' || card.assigneeId === filterAssignee;
+      const ids = getAssigneeIds(card);
+      const matchAssignee = filterAssignee === 'all' || ids.includes(filterAssignee);
       const matchPriority = filterPriority === 'all' || card.priority === filterPriority;
       return matchAssignee && matchPriority;
     });
