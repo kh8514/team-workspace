@@ -13,8 +13,8 @@ const COLUMNS = [
 ];
 
 const VIEWS = [
-  { key: 'my',   label: '내 카드' },
-  { key: 'team', label: '팀 전체' },
+  { key: 'my',   label: '내 할일' },
+  { key: 'team', label: '팀 할일' },
 ];
 
 function KanbanBoard() {
