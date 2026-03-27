@@ -152,7 +152,7 @@ function TodoItem({ todo, onOpenDateModal, onSwitchToKanban, onShareToKanban, on
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.accent; e.currentTarget.style.color = COLORS.accent; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.color = COLORS.textSecondary; }}
           >
-            공유
+            팀으로 복사
           </button>
         )
       )}

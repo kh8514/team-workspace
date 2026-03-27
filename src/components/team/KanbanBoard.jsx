@@ -32,11 +32,12 @@ function KanbanBoard() {
   const [inputText, setInputText] = useState('');
   const [inputCol, setInputCol] = useState('todo');
   const [inputPrio, setInputPrio] = useState('medium');
+  const [inputIsTeam, setInputIsTeam] = useState(false);
 
-  // 뷰 전환 시 담당자 필터 동기화
+  // 뷰 전환 시 담당자 필터 동기화 + 입력 isTeam 기본값 동기화
   useEffect(() => {
-    if (view === 'my' && user?.uid) setFilterAssignee(user.uid);
-    else if (view === 'team') setFilterAssignee('all');
+    if (view === 'my' && user?.uid) { setFilterAssignee(user.uid); setInputIsTeam(false); }
+    else if (view === 'team') { setFilterAssignee('all'); setInputIsTeam(true); }
   }, [view, user?.uid]);
 
   const handleAdd = () => {
@@ -51,11 +52,15 @@ function KanbanBoard() {
       assigneeIds: [user.uid],
       description: '',
       dueDate: '',
+      isTeam: inputIsTeam,
     }, user);
     setInputText('');
   };
 
-  const filteredCards = getFilteredCards();
+  // 내 할일: isTeam 없는 카드 / 팀 할일: isTeam === true인 카드
+  const filteredCards = getFilteredCards().filter(
+    (c) => view === 'my' ? !c.isTeam : c.isTeam === true
+  );
   const selectStyle = { ...STYLE.select, padding: isMobile ? '10px 8px' : '12px 10px', fontSize: isMobile ? 12 : 13 };
 
   return (
@@ -96,6 +101,21 @@ function KanbanBoard() {
           onBlur={(e) => { e.target.style.borderColor = COLORS.border; e.target.style.boxShadow = 'none'; }}
         />
         <div style={{ display: 'flex', gap: 8, flex: isMobile ? 1 : 'none' }}>
+          {/* 개인/팀 토글 */}
+          <div style={{ display: 'flex', background: COLORS.bgCard, border: `1.5px solid ${COLORS.border}`, borderRadius: 8, padding: 2, flexShrink: 0 }}>
+            {[{ v: false, label: '개인' }, { v: true, label: '팀' }].map(({ v, label }) => (
+              <button key={label} onClick={() => setInputIsTeam(v)}
+                style={{
+                  padding: isMobile ? '6px 8px' : '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, fontFamily: 'Noto Sans KR, sans-serif', transition: 'all .15s',
+                  background: inputIsTeam === v ? COLORS.accent : 'transparent',
+                  color: inputIsTeam === v ? '#fff' : COLORS.textSecondary,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <select value={inputCol} onChange={(e) => setInputCol(e.target.value)}
             style={{ ...selectStyle, flex: isMobile ? 1 : 'none' }}
             onFocus={(e) => (e.target.style.borderColor = COLORS.accent)}

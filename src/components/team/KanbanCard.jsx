@@ -101,8 +101,8 @@ function KanbanCard({ card }) {
           animation: 'itemIn .22s ease',
         }}
       >
-        {/* 날짜 배지 */}
-        <div style={{ marginBottom: 7, minHeight: 18 }}>
+        {/* 날짜 배지 + 팀 업무 배지 */}
+        <div style={{ marginBottom: 7, minHeight: 18, display: 'flex', alignItems: 'center', gap: 5 }}>
           {drLabel ? (
             <button onClick={openDateModal}
               style={dsStyle
@@ -118,6 +118,12 @@ function KanbanCard({ card }) {
             >
               📅
             </button>
+          )}
+          {card.isTeam && (
+            <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 99, flexShrink: 0,
+              background: 'rgba(124,106,247,.15)', border: '1px solid rgba(124,106,247,.3)', color: '#a78bfa', fontWeight: 600, letterSpacing: '.2px' }}>
+              팀
+            </span>
           )}
         </div>
 

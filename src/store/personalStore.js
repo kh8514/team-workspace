@@ -88,6 +88,7 @@ const usePersonalStore = create((set, get) => ({
         priority: todo.priority || 'medium',
         description: '',
         dueDate: todo.endDate || '',
+        isTeam: true,
       });
 
       // 2. 투두에 syncId 저장

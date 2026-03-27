@@ -57,6 +57,7 @@ function CardDetail({ card, onClose }) {
     startDate: card.startDate || '',
     endDate: card.endDate || card.dueDate || '',
     status: card.status,
+    isTeam: card.isTeam || false,
   });
   const [tagInput, setTagInput] = useState('');
   const [tagColor, setTagColor] = useState(DEFAULT_TAG_COLOR);
@@ -301,6 +302,23 @@ function CardDetail({ card, onClose }) {
                   />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={labelStyle}>구분</label>
+                  <div style={{ display: 'flex', background: '#23232b', border: '1.5px solid #2e2e38', borderRadius: 8, padding: 3, width: 'fit-content' }}>
+                    {[{ v: false, label: '개인 업무' }, { v: true, label: '팀 업무' }].map(({ v, label }) => (
+                      <button key={label} type="button" onClick={() => setEditData({ ...editData, isTeam: v })}
+                        style={{
+                          padding: '6px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                          fontSize: 12, fontWeight: 600, fontFamily: 'Noto Sans KR, sans-serif', transition: 'all .15s',
+                          background: editData.isTeam === v ? '#7c6af7' : 'transparent',
+                          color: editData.isTeam === v ? '#fff' : '#7a7a8e',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
                   <label style={labelStyle}>상태</label>
                   <select
                     value={editData.status}
@@ -437,9 +455,17 @@ function CardDetail({ card, onClose }) {
           ) : (
             /* ── 상세 보기 ── */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: '#e8e8f0', lineHeight: 1.4 }}>
-                {card.title}
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 700, color: '#e8e8f0', lineHeight: 1.4, flex: 1 }}>
+                  {card.title}
+                </h2>
+                {card.isTeam && (
+                  <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, flexShrink: 0, marginTop: 3,
+                    background: 'rgba(124,106,247,.15)', border: '1.5px solid rgba(124,106,247,.35)', color: '#a78bfa', fontWeight: 600 }}>
+                    팀 업무
+                  </span>
+                )}
+              </div>
               {card.description && (
                 <p style={{ fontSize: 14, color: '#7a7a8e', lineHeight: 1.6 }}>{card.description}</p>
               )}
