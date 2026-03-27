@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useTeamStore from '../../store/teamStore';
 import useAuthStore from '../../store/authStore';
 import KanbanColumn from './KanbanColumn';
@@ -25,6 +25,10 @@ function KanbanBoard() {
   const [inputText, setInputText] = useState('');
   const [inputCol, setInputCol] = useState('todo');
   const [inputPrio, setInputPrio] = useState('medium');
+
+  useEffect(() => {
+    if (user?.uid) setFilterAssignee(user.uid);
+  }, [user?.uid]);
 
   const handleAdd = () => {
     if (!inputText.trim()) return;
