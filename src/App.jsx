@@ -21,7 +21,7 @@ const TABS = [
 function App() {
   const { user, loading, initAuth, logout } = useAuthStore();
   const { subscribe: subPersonal, unsubscribeAll: unsubPersonal, subscribeArchive, unsubscribeArchive } = usePersonalStore();
-  const { subscribe: subTeam, unsubscribeAll: unsubTeam, loadMembers, cards } = useTeamStore();
+  const { subscribe: subTeam, unsubscribeAll: unsubTeam, loadMembers, loadTeamTags, cards } = useTeamStore();
   const { isMobile } = useBreakpoint();
   const [activeTab, setActiveTab] = useState('todo');
   const [overdueCards, setOverdueCards] = useState([]);
@@ -37,6 +37,7 @@ function App() {
     subscribeArchive(user.uid);
     subTeam();
     loadMembers();
+    loadTeamTags();
     const unsubActivity = subscribeActivity((feed) => { if (!cancelled) setActivityFeed(feed); });
     return () => {
       cancelled = true;

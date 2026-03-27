@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import {
   subscribeCards,
   subscribeMembers,
+  subscribeTeamTags,
+  saveTeamTag,
+  removeTeamTag,
   addCard,
   updateCard,
   moveCard,
@@ -22,10 +25,13 @@ const getPrimaryAssigneeId = (card) => getAssigneeIds(card)[0] || null;
 const useTeamStore = create((set, get) => ({
   cards: [],
   members: [],
+  teamTags: [],
   unsubscribe: null,
   unsubscribeMembers: null,
+  unsubscribeTeamTags: null,
   filterAssignee: 'all',
   filterPriority: 'all',
+  filterTag: null,
 
   // 실시간 구독
   subscribe: () => {
@@ -35,10 +41,11 @@ const useTeamStore = create((set, get) => ({
 
   // 구독 해제
   unsubscribeAll: () => {
-    const { unsubscribe, unsubscribeMembers } = get();
+    const { unsubscribe, unsubscribeMembers, unsubscribeTeamTags } = get();
     if (unsubscribe) unsubscribe();
     if (unsubscribeMembers) unsubscribeMembers();
-    set({ cards: [], members: [], unsubscribe: null, unsubscribeMembers: null });
+    if (unsubscribeTeamTags) unsubscribeTeamTags();
+    set({ cards: [], members: [], teamTags: [], unsubscribe: null, unsubscribeMembers: null, unsubscribeTeamTags: null });
   },
 
   // 멤버 목록 실시간 구독
@@ -47,9 +54,22 @@ const useTeamStore = create((set, get) => ({
     set({ unsubscribeMembers });
   },
 
+  // 팀 태그 실시간 구독
+  loadTeamTags: () => {
+    const unsubscribeTeamTags = subscribeTeamTags((teamTags) => set({ teamTags }));
+    set({ unsubscribeTeamTags });
+  },
+
+  // 팀 태그 저장
+  saveTeamTag: (tag) => saveTeamTag(tag),
+
+  // 팀 태그 삭제
+  removeTeamTag: (tagId) => removeTeamTag(tagId),
+
   // 필터
   setFilterAssignee: (value) => set({ filterAssignee: value }),
   setFilterPriority: (value) => set({ filterPriority: value }),
+  setFilterTag: (tag) => set({ filterTag: tag }),
 
   // 카드 이동 → 주 담당자 투두 완료 동기화
   moveCard: async (cardId, status, card, actor) => {
@@ -166,14 +186,15 @@ const useTeamStore = create((set, get) => ({
     }
   },
 
-  // 필터링된 카드 (assigneeIds 배열 지원)
+  // 필터링된 카드 (assigneeIds 배열 + 태그 필터 지원)
   getFilteredCards: () => {
-    const { cards, filterAssignee, filterPriority } = get();
+    const { cards, filterAssignee, filterPriority, filterTag } = get();
     return cards.filter((card) => {
       const ids = getAssigneeIds(card);
       const matchAssignee = filterAssignee === 'all' || ids.includes(filterAssignee);
       const matchPriority = filterPriority === 'all' || card.priority === filterPriority;
-      return matchAssignee && matchPriority;
+      const matchTag = !filterTag || (card.tags || []).some((t) => t.label === filterTag.label);
+      return matchAssignee && matchPriority && matchTag;
     });
   },
 }));

@@ -1,6 +1,6 @@
 import { db } from './config';
 import { auth } from './config';
-import { ref, push, update, remove, onValue, off, get } from 'firebase/database';
+import { ref, push, update, remove, onValue, off, get, set } from 'firebase/database';
 
 // 칸반 카드 실시간 구독
 export const subscribeCards = (callback) => {
@@ -113,3 +113,28 @@ export const deleteComment = async (cardId, commentId) => {
   }
   return remove(commentRef);
 };
+
+// ── 팀 공통 태그 ──────────────────────────────────────────
+
+// 팀 태그 실시간 구독
+export const subscribeTeamTags = (callback) => {
+  const tagsRef = ref(db, 'teamTags');
+  onValue(tagsRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(Object.entries(snapshot.val()).map(([id, v]) => ({ id, ...v })));
+    } else {
+      callback([]);
+    }
+  });
+  return () => off(tagsRef);
+};
+
+// 팀 태그 저장 (label을 id로 사용, 중복 방지)
+export const saveTeamTag = (tag) => {
+  const tagId = tag.label.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9가-힣-]/g, '');
+  if (!tagId) return Promise.resolve();
+  return set(ref(db, `teamTags/${tagId}`), { label: tag.label, color: tag.color });
+};
+
+// 팀 태그 삭제
+export const removeTeamTag = (tagId) => remove(ref(db, `teamTags/${tagId}`));

@@ -4,6 +4,7 @@ import useAuthStore from '../../store/authStore';
 import KanbanColumn from './KanbanColumn';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { COLORS, STYLE } from '../../constants/theme';
+import { getTagColor } from '../../constants/tags';
 
 const COLUMNS = [
   { status: 'todo',       title: '할 일',   colKey: 'todo' },
@@ -22,8 +23,8 @@ function KanbanBoard() {
   const { isMobile, isTablet } = useBreakpoint();
   const {
     getFilteredCards, members,
-    filterAssignee, filterPriority,
-    setFilterAssignee, setFilterPriority,
+    filterAssignee, filterPriority, filterTag,
+    setFilterAssignee, setFilterPriority, setFilterTag,
     addCard,
   } = useTeamStore();
 
@@ -140,6 +141,26 @@ function KanbanBoard() {
           <option value="medium">🟡 중간</option>
           <option value="low">🟢 낮음</option>
         </select>
+
+        {/* 활성 태그 필터 */}
+        {filterTag && (() => {
+          const tc = getTagColor(filterTag.color);
+          return (
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 12, padding: '5px 10px', borderRadius: 99,
+              background: tc.bg, border: `1.5px solid ${tc.border}`, color: tc.color,
+            }}>
+              🏷 {filterTag.label}
+              <button
+                onClick={() => setFilterTag(null)}
+                style={{ background: 'none', border: 'none', color: tc.color, cursor: 'pointer', padding: 0, fontSize: 15, lineHeight: 1, opacity: 0.8 }}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })()}
       </div>
 
       {/* 칸반 컬럼 */}

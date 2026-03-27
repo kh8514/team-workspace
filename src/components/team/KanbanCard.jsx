@@ -7,9 +7,10 @@ import { PRIORITY_CYCLE, PRIORITY_STYLE } from '../../constants/priority';
 import { STATUS_ORDER, STATUS_LABEL } from '../../constants/status';
 import { COLORS, DATE_STATUS_STYLE } from '../../constants/theme';
 import { fmtDate, todayYMD, dateRangeLabel, dateStatus } from '../../utils/date';
+import { getTagColor } from '../../constants/tags';
 
 function KanbanCard({ card }) {
-  const { members, moveCard, updateCard, completeCard } = useTeamStore();
+  const { members, moveCard, updateCard, completeCard, setFilterTag } = useTeamStore();
   const { user } = useAuthStore();
   const [showDetail, setShowDetail] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -121,9 +122,34 @@ function KanbanCard({ card }) {
         </div>
 
         {/* 카드 텍스트 */}
-        <div style={{ fontSize: 14, lineHeight: 1.45, wordBreak: 'break-all', marginBottom: 8, color: COLORS.textPrimary }}>
+        <div style={{ fontSize: 14, lineHeight: 1.45, wordBreak: 'break-all', marginBottom: 6, color: COLORS.textPrimary }}>
           {card.title}
         </div>
+
+        {/* 태그 */}
+        {(card.tags || []).length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 7 }}>
+            {(card.tags || []).map((t) => {
+              const tc = getTagColor(t.color);
+              return (
+                <span
+                  key={t.label}
+                  onClick={(e) => { e.stopPropagation(); setFilterTag(t); }}
+                  title="클릭하여 필터"
+                  style={{
+                    fontSize: 10, padding: '2px 7px', borderRadius: 99, cursor: 'pointer',
+                    background: tc.bg, border: `1px solid ${tc.border}`, color: tc.color,
+                    transition: 'opacity .15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.7')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                >
+                  {t.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
 
         {/* 카드 푸터 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>

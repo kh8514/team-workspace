@@ -4,6 +4,7 @@ import useAuthStore from '../../store/authStore';
 import useTeamStore, { getAssigneeIds } from '../../store/teamStore';
 import { subscribeComments, addComment, deleteComment } from '../../firebase/team';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
+import { TAG_COLORS, DEFAULT_TAG_COLOR, getTagColor } from '../../constants/tags';
 
 const PRIORITY_STYLE = {
   high:   { bg: 'rgba(248,113,113,.18)', color: '#f87171',  border: 'rgba(248,113,113,.3)',  label: '높음' },
@@ -42,7 +43,7 @@ const labelStyle = {
 
 function CardDetail({ card, onClose }) {
   const { user } = useAuthStore();
-  const { members, updateCard, deleteCard } = useTeamStore();
+  const { members, teamTags, updateCard, deleteCard, saveTeamTag } = useTeamStore();
   const { isMobile } = useBreakpoint();
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
@@ -51,11 +52,14 @@ function CardDetail({ card, onClose }) {
     title: card.title,
     description: card.description || '',
     assigneeIds: getAssigneeIds(card),
+    tags: card.tags || [],
     priority: card.priority || 'medium',
     startDate: card.startDate || '',
     endDate: card.endDate || card.dueDate || '',
     status: card.status,
   });
+  const [tagInput, setTagInput] = useState('');
+  const [tagColor, setTagColor] = useState(DEFAULT_TAG_COLOR);
 
   const toggleAssignee = (uid) => {
     const ids = editData.assigneeIds;
@@ -63,6 +67,25 @@ function CardDetail({ card, onClose }) {
       ...editData,
       assigneeIds: ids.includes(uid) ? ids.filter((id) => id !== uid) : [...ids, uid],
     });
+  };
+
+  const addTag = (label, color) => {
+    const l = label.trim();
+    if (!l || editData.tags.some((t) => t.label === l)) return;
+    const tag = { label: l, color: color.id };
+    setEditData({ ...editData, tags: [...editData.tags, tag] });
+    saveTeamTag(tag);
+    setTagInput('');
+  };
+
+  const removeTag = (label) =>
+    setEditData({ ...editData, tags: editData.tags.filter((t) => t.label !== label) });
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(tagInput, tagColor);
+    }
   };
 
   useEffect(() => {
@@ -291,6 +314,106 @@ function CardDetail({ card, onClose }) {
                     ))}
                   </select>
                 </div>
+
+                {/* 태그 */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={labelStyle}>태그</label>
+
+                  {/* 색상 선택 */}
+                  <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
+                    {TAG_COLORS.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setTagColor(c)}
+                        style={{
+                          width: 18, height: 18, borderRadius: '50%', cursor: 'pointer',
+                          background: c.color, border: tagColor.id === c.id ? `2.5px solid #fff` : '2.5px solid transparent',
+                          padding: 0, flexShrink: 0, transition: 'border-color .15s',
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* 태그 입력 */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                      placeholder="태그 입력 후 Enter"
+                      style={{ ...inputStyle, flex: 1, padding: '7px 10px' }}
+                      onFocus={(e) => e.target.style.borderColor = '#7c6af7'}
+                      onBlur={(e) => e.target.style.borderColor = '#2e2e38'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addTag(tagInput, tagColor)}
+                      style={{
+                        background: tagColor.bg, border: `1.5px solid ${tagColor.border}`,
+                        borderRadius: 7, color: tagColor.color, cursor: 'pointer',
+                        fontSize: 13, padding: '0 12px', flexShrink: 0,
+                      }}
+                    >
+                      추가
+                    </button>
+                  </div>
+
+                  {/* 팀 공통 태그 */}
+                  {teamTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                      {teamTags.map((t) => {
+                        const tc = getTagColor(t.color);
+                        const already = editData.tags.some((x) => x.label === t.label);
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => already ? removeTag(t.label) : addTag(t.label, tc)}
+                            style={{
+                              fontSize: 11, padding: '3px 9px', borderRadius: 99, cursor: 'pointer',
+                              background: already ? tc.bg : 'transparent',
+                              border: `1.5px solid ${already ? tc.border : '#2e2e38'}`,
+                              color: already ? tc.color : '#7a7a8e',
+                              transition: 'all .15s',
+                            }}
+                          >
+                            {t.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 현재 카드 태그 */}
+                  {editData.tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                      {editData.tags.map((t) => {
+                        const tc = getTagColor(t.color);
+                        return (
+                          <span
+                            key={t.label}
+                            style={{
+                              fontSize: 11, padding: '3px 8px', borderRadius: 99,
+                              background: tc.bg, border: `1.5px solid ${tc.border}`, color: tc.color,
+                              display: 'flex', alignItems: 'center', gap: 4,
+                            }}
+                          >
+                            {t.label}
+                            <button
+                              type="button"
+                              onClick={() => removeTag(t.label)}
+                              style={{ background: 'none', border: 'none', color: tc.color, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1, opacity: 0.7 }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -320,6 +443,27 @@ function CardDetail({ card, onClose }) {
               {card.description && (
                 <p style={{ fontSize: 14, color: '#7a7a8e', lineHeight: 1.6 }}>{card.description}</p>
               )}
+
+              {/* 태그 */}
+              {(card.tags || []).length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {(card.tags || []).map((t) => {
+                    const tc = getTagColor(t.color);
+                    return (
+                      <span
+                        key={t.label}
+                        style={{
+                          fontSize: 11, padding: '3px 9px', borderRadius: 99,
+                          background: tc.bg, border: `1.5px solid ${tc.border}`, color: tc.color,
+                        }}
+                      >
+                        {t.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {/* 담당자 */}
                 <div style={{ background: '#23232b', borderRadius: 10, padding: '12px 14px' }}>
