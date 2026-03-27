@@ -12,6 +12,11 @@ const COLUMNS = [
   { status: 'done',       title: '완료',    colKey: 'done' },
 ];
 
+const VIEWS = [
+  { key: 'my',   label: '내 카드' },
+  { key: 'team', label: '팀 전체' },
+];
+
 function KanbanBoard() {
   const { user } = useAuthStore();
   const { isMobile, isTablet } = useBreakpoint();
@@ -22,13 +27,16 @@ function KanbanBoard() {
     addCard,
   } = useTeamStore();
 
+  const [view, setView] = useState('my');
   const [inputText, setInputText] = useState('');
   const [inputCol, setInputCol] = useState('todo');
   const [inputPrio, setInputPrio] = useState('medium');
 
+  // 뷰 전환 시 담당자 필터 동기화
   useEffect(() => {
-    if (user?.uid) setFilterAssignee(user.uid);
-  }, [user?.uid]);
+    if (view === 'my' && user?.uid) setFilterAssignee(user.uid);
+    else if (view === 'team') setFilterAssignee('all');
+  }, [view, user?.uid]);
 
   const handleAdd = () => {
     if (!inputText.trim()) return;
@@ -51,6 +59,25 @@ function KanbanBoard() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', animation: 'fadeUp .4s ease' }}>
+
+      {/* 뷰 탭 */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: COLORS.bgCard, borderRadius: 10, padding: 4, width: 'fit-content' }}>
+        {VIEWS.map((v) => (
+          <button
+            key={v.key}
+            onClick={() => setView(v.key)}
+            style={{
+              padding: '6px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, fontFamily: 'Noto Sans KR, sans-serif',
+              transition: 'all .15s',
+              background: view === v.key ? COLORS.accent : 'transparent',
+              color: view === v.key ? '#fff' : COLORS.textSecondary,
+            }}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
 
       {/* 입력 영역 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -98,11 +125,14 @@ function KanbanBoard() {
 
       {/* 필터 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}
-          style={{ ...STYLE.select, padding: '8px 10px', fontSize: 12, flex: isMobile ? 1 : 'none' }}>
-          <option value="all">👤 전체 담당자</option>
-          {members.map((m) => <option key={m.uid} value={m.uid}>{m.name}</option>)}
-        </select>
+        {/* 팀 전체 뷰에서만 담당자 필터 표시 */}
+        {view === 'team' && (
+          <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}
+            style={{ ...STYLE.select, padding: '8px 10px', fontSize: 12, flex: isMobile ? 1 : 'none' }}>
+            <option value="all">👤 전체 담당자</option>
+            {members.map((m) => <option key={m.uid} value={m.uid}>{m.name}</option>)}
+          </select>
+        )}
         <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}
           style={{ ...STYLE.select, padding: '8px 10px', fontSize: 12, flex: isMobile ? 1 : 'none' }}>
           <option value="all">🎯 전체 우선순위</option>
