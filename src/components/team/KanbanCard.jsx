@@ -183,6 +183,17 @@ function KanbanCard({ card }) {
           )}
           {!isAuthor && <div style={{ flex: 1 }} />}
 
+          {/* 댓글 배지 */}
+          {card.commentCount > 0 && (
+            <span style={{
+              fontSize: 10, padding: '2px 6px', borderRadius: 5, flexShrink: 0,
+              background: 'rgba(124,106,247,.12)', border: '1px solid rgba(124,106,247,.25)',
+              color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 3,
+            }}>
+              💬 {card.commentCount}
+            </span>
+          )}
+
           {/* 우선순위 배지 */}
           <button
             onClick={handlePriorityCycle}

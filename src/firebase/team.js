@@ -1,6 +1,6 @@
 import { db } from './config';
 import { auth } from './config';
-import { ref, push, update, remove, onValue, off, get, set } from 'firebase/database';
+import { ref, push, update, remove, onValue, off, get, set, runTransaction } from 'firebase/database';
 
 // 칸반 카드 실시간 구독
 export const subscribeCards = (callback) => {
@@ -94,12 +94,11 @@ export const subscribeComments = (cardId, callback) => {
 };
 
 // 댓글 추가
-export const addComment = (cardId, commentData) => {
+export const addComment = async (cardId, commentData) => {
   const commentsRef = ref(db, `comments/${cardId}`);
-  return push(commentsRef, {
-    ...commentData,
-    createdAt: Date.now(),
-  });
+  const result = await push(commentsRef, { ...commentData, createdAt: Date.now() });
+  await runTransaction(ref(db, `team/${cardId}/commentCount`), (n) => (n || 0) + 1);
+  return result;
 };
 
 // 댓글 삭제 (작성자만 가능)
@@ -111,7 +110,8 @@ export const deleteComment = async (cardId, commentId) => {
   if (snapshot.exists() && snapshot.val().authorId !== uid) {
     throw new Error('댓글 작성자만 삭제할 수 있습니다.');
   }
-  return remove(commentRef);
+  await remove(commentRef);
+  await runTransaction(ref(db, `team/${cardId}/commentCount`), (n) => Math.max((n || 0) - 1, 0));
 };
 
 // ── 팀 공통 태그 ──────────────────────────────────────────
