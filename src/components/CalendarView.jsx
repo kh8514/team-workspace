@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import usePersonalStore from '../store/personalStore';
+import useTeamStore from '../store/teamStore';
 import useAuthStore from '../store/authStore';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import { PRIORITY_EVENT_STYLE } from '../constants/priority';
@@ -7,10 +8,21 @@ import { todayYMD, ymd, getTodosForDate } from '../utils/date';
 import MobileWeekView from './calendar/MobileWeekView';
 import CalendarPopup from './calendar/CalendarPopup';
 
+const getCardsForDate = (cards, dateStr) =>
+  cards.filter((c) => {
+    const s = c.startDate;
+    const e = c.endDate || c.dueDate;
+    if (s && e) return dateStr >= s && dateStr <= e;
+    if (s) return dateStr === s;
+    if (e) return dateStr === e;
+    return false;
+  });
+
 const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 function CalendarView() {
   const { todos, addTodo, shareTodoToKanban, updateTodo, updateTodoDates, deleteTodo } = usePersonalStore();
+  const { cards } = useTeamStore();
   const { user } = useAuthStore();
   const { isMobile } = useBreakpoint();
   const today = todayYMD();
@@ -128,6 +140,8 @@ function CalendarView() {
         {cells.map((cell, idx) => {
           const dateStr = ymd(cell.year, cell.month, cell.day);
           const cellTodos = getTodosForDate(todos, dateStr);
+          const cellCards = getCardsForDate(cards, dateStr);
+          const totalCount = cellTodos.length + cellCards.length;
           const isToday = dateStr === today;
           const dow = idx % 7;
           const isLastRow = idx >= cells.length - 7;
@@ -160,35 +174,28 @@ function CalendarView() {
                   fontFamily: 'Space Mono, monospace',
                   fontSize: 12,
                   color: isToday ? '#fff' : cell.otherMonth ? 'rgba(122,122,142,.3)' : dow === 0 ? '#f87171' : dow === 6 ? '#60a5fa' : '#7a7a8e',
-                  width: 24,
-                  height: 24,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  width: 24, height: 24,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                   ...(isToday ? { background: '#7c6af7', borderRadius: '50%' } : {}),
                 }}>
                   {cell.day}
                 </div>
-                {cellTodos.length >= 5 && (
+                {totalCount >= 5 && (
                   <div style={{
-                    fontFamily: 'Space Mono, monospace',
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: '#a78bfa',
-                    background: 'rgba(124,106,247,.18)',
-                    border: '1px solid rgba(124,106,247,.35)',
-                    borderRadius: 99,
-                    padding: '1px 5px',
-                    flexShrink: 0,
+                    fontFamily: 'Space Mono, monospace', fontSize: 9, fontWeight: 700,
+                    color: '#a78bfa', background: 'rgba(124,106,247,.18)',
+                    border: '1px solid rgba(124,106,247,.35)', borderRadius: 99,
+                    padding: '1px 5px', flexShrink: 0,
                   }}>
-                    {cellTodos.length}
+                    {totalCount}
                   </div>
                 )}
               </div>
 
               {/* 이벤트 — 스크롤 가능 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', maxHeight: 72, flex: 1 }}>
+                {/* 개인 투두 */}
                 {cellTodos.map((todo) => {
                   const ps = PRIORITY_EVENT_STYLE[todo.priority] || PRIORITY_EVENT_STYLE.medium;
                   return (
@@ -196,16 +203,9 @@ function CalendarView() {
                       key={todo.id}
                       onClick={(e) => { e.stopPropagation(); setDateEditModal({ id: todo.id, text: todo.text, startDate: todo.startDate || '', endDate: todo.endDate || '' }); }}
                       style={{
-                        borderRadius: 3,
-                        fontSize: 10,
-                        padding: '2px 5px',
-                        lineHeight: 1.3,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        background: ps.bg,
-                        color: ps.color,
-                        flexShrink: 0,
+                        borderRadius: 3, fontSize: 10, padding: '2px 5px', lineHeight: 1.3,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        background: ps.bg, color: ps.color, flexShrink: 0,
                         opacity: todo.done ? 0.45 : 1,
                         textDecoration: todo.done ? 'line-through' : 'none',
                         cursor: 'pointer',
@@ -215,6 +215,24 @@ function CalendarView() {
                     </div>
                   );
                 })}
+                {/* 팀 카드 */}
+                {cellCards.map((card) => (
+                  <div
+                    key={card.id}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      borderRadius: 3, fontSize: 10, padding: '2px 5px', lineHeight: 1.3,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      background: 'rgba(56,189,248,.12)', color: '#38bdf8',
+                      borderLeft: '2.5px solid rgba(56,189,248,.6)',
+                      flexShrink: 0, cursor: 'default',
+                      opacity: card.status === 'done' ? 0.45 : 1,
+                    }}
+                    title={`[팀] ${card.title}`}
+                  >
+                    팀 {card.title}
+                  </div>
+                ))}
               </div>
             </div>
           );
@@ -229,13 +247,14 @@ function CalendarView() {
         borderRadius: 10, fontSize: 12, color: '#7a7a8e',
       }}>
         {[
-          { bg: 'rgba(248,113,113,.5)', label: '높음 우선순위' },
-          { bg: 'rgba(124,106,247,.5)', label: '보통 우선순위' },
-          { bg: 'rgba(52,211,153,.4)',  label: '낮음 우선순위' },
+          { bg: 'rgba(248,113,113,.5)', label: '개인 · 높음' },
+          { bg: 'rgba(124,106,247,.5)', label: '개인 · 보통' },
+          { bg: 'rgba(52,211,153,.4)',  label: '개인 · 낮음' },
+          { bg: 'rgba(56,189,248,.25)', label: '팀 업무', border: '2px solid rgba(56,189,248,.6)', borderRadius: 3 },
           { bg: '#23232b', label: '완료됨', border: '1px solid #2e2e38' },
         ].map((item) => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: item.bg, border: item.border }} />
+            <div style={{ width: 8, height: 8, borderRadius: item.borderRadius ?? 2, background: item.bg, border: item.border }} />
             {item.label}
           </div>
         ))}
