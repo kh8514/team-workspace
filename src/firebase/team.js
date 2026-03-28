@@ -114,6 +114,18 @@ export const deleteComment = async (cardId, commentId) => {
   await runTransaction(ref(db, `team/${cardId}/commentCount`), (n) => Math.max((n || 0) - 1, 0));
 };
 
+// 기존 댓글 수 일괄 동기화 (마이그레이션, 최초 1회)
+export const migrateCommentCounts = async () => {
+  const commentsSnap = await get(ref(db, 'comments'));
+  if (!commentsSnap.exists()) return;
+  const updates = {};
+  commentsSnap.forEach((cardSnap) => {
+    const count = Object.keys(cardSnap.val() || {}).length;
+    if (count > 0) updates[`team/${cardSnap.key}/commentCount`] = count;
+  });
+  if (Object.keys(updates).length > 0) await update(ref(db), updates);
+};
+
 // ── 팀 공통 태그 ──────────────────────────────────────────
 
 // 팀 태그 실시간 구독

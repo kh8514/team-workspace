@@ -8,6 +8,7 @@ import KanbanBoard from './components/team/KanbanBoard';
 import CalendarView from './components/CalendarView';
 import SummaryView from './components/SummaryView';
 import { subscribeActivity } from './firebase/activity';
+import { migrateCommentCounts } from './firebase/team';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { NotificationBell } from './components/NotificationSetup';
 
@@ -29,6 +30,14 @@ function App() {
   const [activityFeed, setActivityFeed] = useState([]);
 
   useEffect(() => { initAuth(); }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    // 댓글 수 마이그레이션 (최초 1회)
+    if (!localStorage.getItem('commentCountMigrated')) {
+      migrateCommentCounts().then(() => localStorage.setItem('commentCountMigrated', '1'));
+    }
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user) return;
