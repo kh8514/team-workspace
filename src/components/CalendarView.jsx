@@ -105,7 +105,8 @@ function CalendarView() {
       </div>
 
       {/* 캘린더 그리드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: '#2e2e38', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ border: '1.5px solid #2e2e38', borderRadius: 12, overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', width: '100%' }}>
         {/* 요일 헤더 */}
         {DAYS_OF_WEEK.map((dow, i) => (
           <div key={dow} style={{
@@ -115,6 +116,9 @@ function CalendarView() {
             fontSize: 12,
             fontWeight: 600,
             color: i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : '#7a7a8e',
+            borderRight: i < 6 ? '1px solid #2e2e38' : 'none',
+            borderBottom: '1px solid #2e2e38',
+            boxSizing: 'border-box',
           }}>
             {dow}
           </div>
@@ -126,6 +130,7 @@ function CalendarView() {
           const cellTodos = getTodosForDate(todos, dateStr);
           const isToday = dateStr === today;
           const dow = idx % 7;
+          const isLastRow = idx >= cells.length - 7;
 
           return (
             <div
@@ -141,6 +146,10 @@ function CalendarView() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 3,
+                borderRight: dow < 6 ? '1px solid #2e2e38' : 'none',
+                borderBottom: isLastRow ? 'none' : '1px solid #2e2e38',
+                boxSizing: 'border-box',
+                minWidth: 0,
               }}
               onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.background = '#1e1e25'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = isToday ? '#1d1b2e' : cell.otherMonth ? '#181820' : '#1a1a1f'; }}
@@ -210,6 +219,7 @@ function CalendarView() {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* 범례 */}
