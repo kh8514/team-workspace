@@ -280,6 +280,20 @@ function CardDetail({ card, onClose }) {
                   </select>
                 </div>
                 <div>
+                  <label style={labelStyle}>상태</label>
+                  <select
+                    value={editData.status}
+                    onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                    style={{ ...inputStyle }}
+                    onFocus={(e) => e.target.style.borderColor = '#7c6af7'}
+                    onBlur={(e) => e.target.style.borderColor = '#2e2e38'}
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s.key} value={s.key}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label style={labelStyle}>시작일</label>
                   <input
                     type="date"
@@ -317,20 +331,6 @@ function CardDetail({ card, onClose }) {
                       </button>
                     ))}
                   </div>
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>상태</label>
-                  <select
-                    value={editData.status}
-                    onChange={(e) => setEditData({ ...editData, status: e.target.value })}
-                    style={{ ...inputStyle }}
-                    onFocus={(e) => e.target.style.borderColor = '#7c6af7'}
-                    onBlur={(e) => e.target.style.borderColor = '#2e2e38'}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s.key} value={s.key}>{s.label}</option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* 태그 */}
