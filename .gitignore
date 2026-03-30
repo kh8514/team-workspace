@@ -27,4 +27,5 @@ dist-ssr
 .env.local
 
 .settings.local.json
-.claude/
+.claude/node_modules
+functions/node_modules
