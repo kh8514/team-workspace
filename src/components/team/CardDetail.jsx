@@ -235,36 +235,39 @@ function CardDetail({ card, onClose }) {
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>담당자</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {members.map((m) => {
-                      const selected = editData.assigneeIds.includes(m.uid);
-                      return (
-                        <button
-                          key={m.uid}
-                          type="button"
-                          onClick={() => toggleAssignee(m.uid)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '5px 10px', borderRadius: 20, cursor: 'pointer',
-                            fontSize: 12, fontFamily: 'Noto Sans KR, sans-serif',
-                            border: `1.5px solid ${selected ? '#7c6af7' : '#2e2e38'}`,
-                            background: selected ? 'rgba(124,106,247,.15)' : '#23232b',
-                            color: selected ? '#a78bfa' : '#7a7a8e',
-                            transition: 'all .15s',
-                          }}
-                        >
-                          {m.photoURL
-                            ? <img src={m.photoURL} alt={m.name} style={{ width: 16, height: 16, borderRadius: '50%' }} />
-                            : <div style={{ width: 16, height: 16, borderRadius: '50%', background: selected ? '#7c6af7' : '#3e3e50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: '#fff' }}>{m.name?.[0]}</div>
-                          }
-                          {m.name}
-                        </button>
-                      );
-                    })}
+                {/* 팀 업무일 때만 담당자 선택 표시 */}
+                {editData.isTeam && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>담당자</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {members.map((m) => {
+                        const selected = editData.assigneeIds.includes(m.uid);
+                        return (
+                          <button
+                            key={m.uid}
+                            type="button"
+                            onClick={() => toggleAssignee(m.uid)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              padding: '5px 10px', borderRadius: 20, cursor: 'pointer',
+                              fontSize: 12, fontFamily: 'Noto Sans KR, sans-serif',
+                              border: `1.5px solid ${selected ? '#7c6af7' : '#2e2e38'}`,
+                              background: selected ? 'rgba(124,106,247,.15)' : '#23232b',
+                              color: selected ? '#a78bfa' : '#7a7a8e',
+                              transition: 'all .15s',
+                            }}
+                          >
+                            {m.photoURL
+                              ? <img src={m.photoURL} alt={m.name} style={{ width: 16, height: 16, borderRadius: '50%' }} />
+                              : <div style={{ width: 16, height: 16, borderRadius: '50%', background: selected ? '#7c6af7' : '#3e3e50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: '#fff' }}>{m.name?.[0]}</div>
+                            }
+                            {m.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
                 <div>
                   <label style={labelStyle}>우선순위</label>
                   <select
@@ -490,26 +493,28 @@ function CardDetail({ card, onClose }) {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {/* 담당자 */}
-                <div style={{ background: '#23232b', borderRadius: 10, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 11, color: '#7a7a8e', fontWeight: 600, marginBottom: 6, letterSpacing: '.3px' }}>담당자</p>
-                  {cardAssignees.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {cardAssignees.map((a) => (
-                        <div key={a.uid} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {a.photoURL
-                            ? <img src={a.photoURL} alt={a.name} style={{ width: 20, height: 20, borderRadius: '50%' }} />
-                            : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#7c6af7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#fff' }}>{a.name?.[0]}</div>
-                          }
-                          <span style={{ fontSize: 13, color: '#e8e8f0', fontWeight: 500 }}>{a.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: 13, color: '#7a7a8e' }}>미지정</span>
-                  )}
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: card.isTeam ? '1fr 1fr' : '1fr', gap: 10 }}>
+                {/* 담당자 — 팀 업무만 표시 */}
+                {card.isTeam && (
+                  <div style={{ background: '#23232b', borderRadius: 10, padding: '12px 14px' }}>
+                    <p style={{ fontSize: 11, color: '#7a7a8e', fontWeight: 600, marginBottom: 6, letterSpacing: '.3px' }}>담당자</p>
+                    {cardAssignees.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {cardAssignees.map((a) => (
+                          <div key={a.uid} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {a.photoURL
+                              ? <img src={a.photoURL} alt={a.name} style={{ width: 20, height: 20, borderRadius: '50%' }} />
+                              : <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#7c6af7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#fff' }}>{a.name?.[0]}</div>
+                            }
+                            <span style={{ fontSize: 13, color: '#e8e8f0', fontWeight: 500 }}>{a.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 13, color: '#7a7a8e' }}>미지정</span>
+                    )}
+                  </div>
+                )}
                 {/* 기간 */}
                 <div style={{ background: '#23232b', borderRadius: 10, padding: '12px 14px' }}>
                   <p style={{ fontSize: 11, color: '#7a7a8e', fontWeight: 600, marginBottom: 6, letterSpacing: '.3px' }}>기간</p>
