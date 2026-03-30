@@ -28,7 +28,6 @@ import {
   restoreFromArchive,
 } from '../firebase/personal';
 import { addCard, getCardBySyncId, moveCard, deleteCard } from '../firebase/team';
-import { logActivity, buildActivity } from '../firebase/activity';
 
 const usePersonalStore = create((set, get) => ({
   todos: [],

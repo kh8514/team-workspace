@@ -11,7 +11,6 @@ import {
   deleteCard,
 } from '../firebase/team';
 import { setTodoDoneBySyncId, getTodoBySyncId, deleteTodo as deleteTodoFn, addTodo as addTodoFn, archiveTodos, updateTodoDates, updateTodoPriority } from '../firebase/personal';
-import { logActivity, buildActivity } from '../firebase/activity';
 
 const STATUS_LABEL = { todo: '할 일', inProgress: '진행 중', review: '검토', done: '완료' };
 
@@ -72,7 +71,7 @@ const useTeamStore = create((set, get) => ({
   setFilterTag: (tag) => set({ filterTag: tag }),
 
   // 카드 이동 → 주 담당자 투두 완료 동기화
-  moveCard: async (cardId, status, card, actor) => {
+  moveCard: async (cardId, status, card) => {
     try {
       await moveCard(cardId, status);
 
@@ -83,14 +82,6 @@ const useTeamStore = create((set, get) => ({
           await setTodoDoneBySyncId(primaryId, card.syncId, isDone);
         }
       }
-
-      if (actor) {
-        await logActivity(buildActivity('card_moved', actor, {
-          title: card.title,
-          from: STATUS_LABEL[card.status] || card.status,
-          to:   STATUS_LABEL[status] || status,
-        }));
-      }
     } catch (err) {
       console.error('카드 이동 실패:', err);
       throw err;
@@ -98,7 +89,7 @@ const useTeamStore = create((set, get) => ({
   },
 
   // 칸반 카드 추가
-  addCard: async (cardData, actor) => {
+  addCard: async (cardData) => {
     try {
       const syncId = Date.now().toString(36) + Math.random().toString(36).slice(2);
       const d = new Date();
@@ -111,10 +102,6 @@ const useTeamStore = create((set, get) => ({
 
       if (assigneeId) {
         await addTodoFn(assigneeId, cardData.title, syncId, today, today, cardData.priority || 'medium');
-      }
-
-      if (actor) {
-        await logActivity(buildActivity('card_created', actor, { title: cardData.title }));
       }
     } catch (err) {
       console.error('카드 추가 실패:', err);
@@ -149,7 +136,7 @@ const useTeamStore = create((set, get) => ({
   },
 
   // 카드 완료 처리 → 주 담당자 투두 아카이브 + 카드 삭제
-  completeCard: async (cardId, card, actor) => {
+  completeCard: async (cardId, card) => {
     try {
       const primaryId = getPrimaryAssigneeId(card);
       if (card?.syncId && primaryId) {
@@ -157,10 +144,6 @@ const useTeamStore = create((set, get) => ({
         if (todo) await archiveTodos(primaryId, [todo.id]);
       }
       await deleteCard(cardId);
-
-      if (actor) {
-        await logActivity(buildActivity('card_completed', actor, { title: card.title }));
-      }
     } catch (err) {
       console.error('카드 완료 처리 실패:', err);
       throw err;
@@ -168,7 +151,7 @@ const useTeamStore = create((set, get) => ({
   },
 
   // 카드 삭제 → 주 담당자 투두도 함께 삭제
-  deleteCard: async (cardId, card, actor) => {
+  deleteCard: async (cardId, card) => {
     try {
       const primaryId = getPrimaryAssigneeId(card);
       if (card?.syncId && primaryId) {
@@ -176,10 +159,6 @@ const useTeamStore = create((set, get) => ({
         if (todo) await deleteTodoFn(primaryId, todo.id);
       }
       await deleteCard(cardId);
-
-      if (actor) {
-        await logActivity(buildActivity('card_deleted', actor, { title: card?.title || '' }));
-      }
     } catch (err) {
       console.error('카드 삭제 실패:', err);
       throw err;

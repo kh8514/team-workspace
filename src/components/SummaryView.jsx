@@ -10,13 +10,12 @@ import PriorityBars from './summary/PriorityBars';
 import ArchiveList from './summary/ArchiveList';
 import WeeklyChart from './summary/WeeklyChart';
 import MemberKanbanStatus from './summary/MemberKanbanStatus';
-import ActivityFeed from './summary/ActivityFeed';
 import AvgCompletionTime from './summary/AvgCompletionTime';
 
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
 // ── 메인 ─────────────────────────────────────────────────
-function SummaryView({ activityFeed = [] }) {
+function SummaryView() {
   const { todos, archive, restoreFromArchive } = usePersonalStore();
   const { user } = useAuthStore();
   const { cards, members } = useTeamStore();
@@ -156,11 +155,6 @@ function SummaryView({ activityFeed = [] }) {
             <AvgCompletionTime archive={archive} />
           </div>
 
-          {/* 활동 피드 */}
-          <SectionTitle count={activityFeed.length}>최근 활동</SectionTitle>
-          <div style={{ background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12, padding: '8px 4px', marginBottom: 24 }}>
-            <ActivityFeed items={activityFeed} />
-          </div>
         </div>
       )}
 
@@ -196,12 +190,6 @@ function SummaryView({ activityFeed = [] }) {
           <SectionTitle>완료 소요 시간</SectionTitle>
           <div style={{ marginBottom: 24 }}>
             <AvgCompletionTime archive={monthlyArchive} />
-          </div>
-
-          {/* 활동 피드 */}
-          <SectionTitle count={activityFeed.length}>최근 활동</SectionTitle>
-          <div style={{ background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12, padding: '8px 4px', marginBottom: 24 }}>
-            <ActivityFeed items={activityFeed} />
           </div>
 
           <SectionTitle count={monthlyArchive.length}>아카이브</SectionTitle>
@@ -272,12 +260,6 @@ function SummaryView({ activityFeed = [] }) {
           <SectionTitle>완료 소요 시간</SectionTitle>
           <div style={{ marginBottom: 24 }}>
             <AvgCompletionTime archive={yearlyArchive} />
-          </div>
-
-          {/* 활동 피드 */}
-          <SectionTitle count={activityFeed.length}>최근 활동</SectionTitle>
-          <div style={{ background: '#1a1a1f', border: '1.5px solid #2e2e38', borderRadius: 12, padding: '8px 4px', marginBottom: 24 }}>
-            <ActivityFeed items={activityFeed} />
           </div>
 
           <SectionTitle count={yearlyArchive.length}>아카이브</SectionTitle>

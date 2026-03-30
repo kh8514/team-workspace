@@ -7,7 +7,6 @@ import PersonalTodo from './components/personal/PersonalTodo';
 import KanbanBoard from './components/team/KanbanBoard';
 import CalendarView from './components/CalendarView';
 import SummaryView from './components/SummaryView';
-import { subscribeActivity } from './firebase/activity';
 import { migrateCommentCounts } from './firebase/team';
 import { useBreakpoint } from './hooks/useBreakpoint';
 import { NotificationBell } from './components/NotificationSetup';
@@ -27,8 +26,6 @@ function App() {
   const [activeTab, setActiveTab] = useState('todo');
   const [overdueCards, setOverdueCards] = useState([]);
   const [showOverdueAlert, setShowOverdueAlert] = useState(false);
-  const [activityFeed, setActivityFeed] = useState([]);
-
   useEffect(() => { initAuth(); }, []);
 
   useEffect(() => {
@@ -53,13 +50,11 @@ function App() {
     subTeam();
     loadMembers();
     loadTeamTags();
-    const unsubActivity = subscribeActivity((feed) => { if (!cancelled) setActivityFeed(feed); });
     return () => {
       cancelled = true;
       unsubPersonal();
       unsubscribeArchive();
       unsubTeam();
-      unsubActivity();
     };
   }, [user?.uid]);
 
@@ -217,7 +212,7 @@ function App() {
       {activeTab === 'todo'     && <PersonalTodo onSwitchToKanban={() => setActiveTab('kanban')} />}
       {activeTab === 'kanban'   && <KanbanBoard />}
       {activeTab === 'calendar' && <CalendarView />}
-      {activeTab === 'summary'  && <SummaryView activityFeed={activityFeed} />}
+      {activeTab === 'summary'  && <SummaryView />}
     </div>
   );
 }
