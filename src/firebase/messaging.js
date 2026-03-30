@@ -48,6 +48,12 @@ export const requestPermissionAndSaveToken = async (uid) => {
       serviceWorkerRegistration: registration,
     });
   } catch (err) {
+    console.error('FCM getToken 상세 오류:', err);
+    if (err.message?.includes('403') || err.code === 'messaging/token-subscribe-failed') {
+      throw new Error(
+        'FCM 권한 오류(403): Firebase Console → 프로젝트 설정 → Cloud Messaging에서 VAPID 키를 확인하거나, Google Cloud Console에서 Firebase Cloud Messaging API를 활성화해주세요.'
+      );
+    }
     throw new Error('토큰 발급 실패: ' + err.message);
   }
 
