@@ -21,7 +21,7 @@ const TABS = [
 
 function App() {
   const { user, loading, initAuth, logout } = useAuthStore();
-  const { subscribe: subPersonal, unsubscribeAll: unsubPersonal, subscribeArchive, unsubscribeArchive } = usePersonalStore();
+  const { subscribe: subPersonal, unsubscribeAll: unsubPersonal, subscribeArchive, unsubscribeArchive, todos, autoArchiveDone } = usePersonalStore();
   const { subscribe: subTeam, unsubscribeAll: unsubTeam, loadMembers, loadTeamTags, cards } = useTeamStore();
   const { isMobile } = useBreakpoint();
   const [activeTab, setActiveTab] = useState('todo');
@@ -38,6 +38,12 @@ function App() {
       migrateCommentCounts().then(() => localStorage.setItem('commentCountMigrated', '1'));
     }
   }, [user?.uid]);
+
+  // 매주 토요일 자동 아카이브 — todos가 처음 로드됐을 때 실행
+  useEffect(() => {
+    if (!user || todos.length === 0) return;
+    autoArchiveDone(user.uid);
+  }, [user?.uid, todos.length > 0]);
 
   useEffect(() => {
     if (!user) return;

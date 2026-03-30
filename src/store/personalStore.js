@@ -1,4 +1,18 @@
 import { create } from 'zustand';
+
+// 가장 최근 토요일 날짜 문자열 반환 (오늘이 토요일이면 오늘)
+const getLastSaturdayStr = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const daysBack = d.getDay() === 6 ? 0 : (d.getDay() + 1) % 7 === 0 ? 1 : d.getDay() + 1;
+  // getDay(): 0=일,1=월,...,6=토 → 토요일까지 며칠 돌아가야 하는지
+  const toSat = ((d.getDay() - 6 + 7) % 7);
+  d.setDate(d.getDate() - toSat);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+// 세션당 1회만 실행
+const autoArchiveRan = new Set();
 import {
   subscribeTodos,
   addTodo,
@@ -185,6 +199,38 @@ const usePersonalStore = create((set, get) => ({
 
   // 아카이브에서 복원
   restoreFromArchive: (uid, archiveId) => restoreFromArchive(uid, archiveId),
+
+  // 매주 토요일 자동 아카이브 (로그인 시 1회 체크)
+  autoArchiveDone: async (uid) => {
+    if (autoArchiveRan.has(uid)) return;
+    autoArchiveRan.add(uid);
+
+    const key = `lastAutoArchive_${uid}`;
+    const lastRan = localStorage.getItem(key);
+    const lastSat = getLastSaturdayStr();
+
+    if (lastRan && lastRan >= lastSat) return; // 이번 주 이미 실행됨
+
+    const { todos } = get();
+    const doneTodos = todos.filter((t) => t.done);
+
+    try {
+      for (const todo of doneTodos) {
+        if (todo.syncId) {
+          const card = await getCardBySyncId(todo.syncId);
+          if (card) await deleteCard(card.id);
+        }
+      }
+      if (doneTodos.length > 0) {
+        await archiveTodos(uid, doneTodos.map((t) => t.id));
+        await logActivity(buildActivity('todo_archived', null, { count: doneTodos.length, auto: true }));
+      }
+      localStorage.setItem(key, lastSat);
+    } catch (err) {
+      console.error('자동 아카이브 실패:', err);
+      autoArchiveRan.delete(uid); // 실패 시 재시도 가능하게
+    }
+  },
 }));
 
 export default usePersonalStore;
