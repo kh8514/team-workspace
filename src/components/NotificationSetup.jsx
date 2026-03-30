@@ -53,11 +53,15 @@ export function NotificationBell() {
         return;
       }
 
-      // Firebase Messaging 지원 확인
-      const supported = await isMessagingSupported();
-      if (!supported) {
-        setStatus('unsupported');
-        return;
+      // Firebase Messaging 지원 확인 (3초 타임아웃)
+      try {
+        const supported = await Promise.race([
+          isMessagingSupported(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+        ]);
+        if (!supported) { setStatus('unsupported'); return; }
+      } catch {
+        // 타임아웃 또는 오류 → 일단 지원으로 간주하고 진행
       }
 
       if (Notification.permission === 'granted') setStatus('granted');
