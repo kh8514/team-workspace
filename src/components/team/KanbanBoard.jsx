@@ -33,12 +33,6 @@ function KanbanBoard() {
   const [inputCol, setInputCol] = useState('todo');
   const [inputPrio, setInputPrio] = useState('medium');
   const [inputIsTeam, setInputIsTeam] = useState(false);
-  const [inputAssigneeIds, setInputAssigneeIds] = useState([]);
-
-  // 로그인 후 기본 담당자 = 본인
-  useEffect(() => {
-    if (user?.uid) setInputAssigneeIds([user.uid]);
-  }, [user?.uid]);
 
   // 뷰 전환 시 담당자 필터 동기화 + 입력 isTeam 기본값 동기화
   useEffect(() => {
@@ -46,22 +40,16 @@ function KanbanBoard() {
     else if (view === 'team') { setFilterAssignee('all'); setInputIsTeam(true); }
   }, [view, user?.uid]);
 
-  const toggleInputAssignee = (uid) =>
-    setInputAssigneeIds((prev) =>
-      prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]
-    );
-
   const handleAdd = () => {
     if (!inputText.trim()) return;
-    const assigneeIds = inputAssigneeIds.length ? inputAssigneeIds : [user.uid];
     addCard({
       title: inputText.trim(),
       status: inputCol,
       priority: inputPrio,
       authorId: user.uid,
       authorName: user.displayName,
-      assigneeId: assigneeIds[0],
-      assigneeIds,
+      assigneeId: user.uid,
+      assigneeIds: [user.uid],
       description: '',
       dueDate: '',
       isTeam: inputIsTeam,
@@ -155,37 +143,6 @@ function KanbanBoard() {
           </button>
         </div>
       </div>
-
-      {/* 담당자 선택 */}
-      {members.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: COLORS.textSecondary, fontWeight: 600, letterSpacing: '.3px' }}>담당자</span>
-          {members.map((m) => {
-            const selected = inputAssigneeIds.includes(m.uid);
-            return (
-              <button
-                key={m.uid}
-                onClick={() => toggleInputAssignee(m.uid)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '4px 10px', borderRadius: 99, cursor: 'pointer',
-                  fontSize: 12, fontFamily: 'Noto Sans KR, sans-serif',
-                  border: `1.5px solid ${selected ? COLORS.accent : COLORS.border}`,
-                  background: selected ? 'rgba(124,106,247,.15)' : COLORS.bgInput,
-                  color: selected ? COLORS.accentLight : COLORS.textSecondary,
-                  transition: 'all .15s',
-                }}
-              >
-                {m.photoURL
-                  ? <img src={m.photoURL} alt={m.name} style={{ width: 16, height: 16, borderRadius: '50%' }} />
-                  : <div style={{ width: 16, height: 16, borderRadius: '50%', background: selected ? COLORS.accent : '#3e3e50', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, color: '#fff' }}>{m.name?.[0]}</div>
-                }
-                {m.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* 필터 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
