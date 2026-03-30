@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import useAuthStore from './store/authStore';
 import usePersonalStore from './store/personalStore';
-import useTeamStore from './store/teamStore';
+import useTeamStore, { getAssigneeIds } from './store/teamStore';
 import Login from './components/auth/Login';
 import PersonalTodo from './components/personal/PersonalTodo';
 import KanbanBoard from './components/team/KanbanBoard';
@@ -62,7 +62,9 @@ function App() {
   useEffect(() => {
     if (!cards.length || !user) return;
     const today = new Date().toISOString().split('T')[0];
-    const overdue = cards.filter((c) => c.endDate && c.endDate < today && c.status !== 'done');
+    const overdue = cards.filter((c) =>
+      c.endDate && c.endDate < today && c.status !== 'done' && getAssigneeIds(c).includes(user.uid)
+    );
     setOverdueCards(overdue);
     if (overdue.length > 0) setShowOverdueAlert(true);
   }, [cards, user]);
